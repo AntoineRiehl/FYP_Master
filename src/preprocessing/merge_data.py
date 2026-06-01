@@ -1,3 +1,5 @@
+#src/preprocessing/merge_data.py
+
 def compute_movie_stats(ratings):
 
     movie_stats = ratings.groupby("movieId").agg(

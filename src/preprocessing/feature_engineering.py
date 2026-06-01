@@ -1,3 +1,5 @@
+#src/preprocessing/feature_engineering.py
+
 import pandas as pd
 import numpy as np
 
@@ -11,7 +13,7 @@ def compute_weighted_rating(df):
     # Global mean rating
     C = df["avg_rating"].mean()
 
-    # Minimum vote threshold
+    # Minimum vote threshold (Bayesian shrinkage strength)
     m = df["rating_count"].quantile(0.75)
 
     # Bayesian weighted rating
@@ -42,7 +44,6 @@ def concatenate_tags(tags_df):
         .reset_index()
     )
 
-    # Rename column
     movie_tags.rename(
         columns={"tag": "tags_text"},
         inplace=True
@@ -57,58 +58,30 @@ def concatenate_tags(tags_df):
 
 def map_macro_genre(genre_str):
 
-    # Handle missing values
     if pd.isna(genre_str):
         return "Unknown"
 
     genre_str = str(genre_str).strip()
-
     genres = genre_str.split("|")
 
     mapping = {
 
-        "Sci-Fi/Fantasy": [
-            "Sci-Fi",
-            "Fantasy"
-        ],
+        "Sci-Fi/Fantasy": ["Sci-Fi", "Fantasy"],
 
-        "Action/Adventure": [
-            "Action",
-            "Adventure",
-            "War",
-            "Western"
-        ],
+        "Action/Adventure": ["Action", "Adventure", "War", "Western"],
 
-        "Thriller/Horror": [
-            "Thriller",
-            "Horror",
-            "Crime",
-            "Mystery",
-            "Film-Noir"
-        ],
+        "Thriller/Horror": ["Thriller", "Horror", "Crime", "Mystery", "Film-Noir"],
 
-        "Comedy": [
-            "Comedy",
-            "Musical"
-        ],
+        "Comedy": ["Comedy", "Musical"],
 
-        "Drama": [
-            "Drama"
-        ],
+        "Drama": ["Drama"],
 
-        "Family/Animation": [
-            "Animation",
-            "Children's"
-        ],
+        "Family/Animation": ["Animation", "Children's"],
 
-        "Documentary": [
-            "Documentary"
-        ]
+        "Documentary": ["Documentary"]
     }
 
-    # First matching category wins
     for macro, group in mapping.items():
-
         if any(g in genres for g in group):
             return macro
 
@@ -128,7 +101,6 @@ def create_macro_genres(df):
         .str.strip()
     )
 
-    # Optional: genre count
     df["genre_count"] = (
         df["genres"]
         .fillna("")
@@ -139,35 +111,40 @@ def create_macro_genres(df):
 
 
 # =========================================================
-# VISUAL SIZE ENGINEERING
+# VISUAL SIZE ENGINEERING (IMPROVED CONTRAST VERSION)
 # =========================================================
 
-def create_visual_sizes(df):
+def create_visual_sizes(df, strength=1.8):
 
-    # Base importance
-    df["visual_size"] = (
-        np.log1p(df["rating_count"]) *
-        df["weighted_rating"]
-    )
+    """
+    strength:
+        controls how aggressively blockbuster vs niche separation is amplified
+        1.0 = original
+        1.8 = recommended (your current goal)
+        2.5+ = very dramatic / game-like bubble map
+    """
 
-    # Normalize
-    x = df["visual_size"]
+    # Base importance signal
+    base = np.log1p(df["rating_count"]) * df["weighted_rating"]
 
-    x = (
-        (x - x.min()) /
-        (x.max() - x.min())
-    )
+    # Normalize safely
+    min_v = base.min()
+    max_v = base.max()
 
-    # Amplify contrast
-    df["visual_size"] = (
-        np.power(x, 2.5) * 30
-    )
+    if max_v == min_v:
+        df["visual_size"] = 5
+        return df
 
-    # Minimum visibility
-    df["visual_size"] = np.maximum(
-        df["visual_size"],
-        2
-    )
+    x = (base - min_v) / (max_v - min_v)
+
+    # Non-linear contrast boost (this is the key upgrade)
+    x = np.power(x, strength)
+
+    # Scale to usable UI range
+    df["visual_size"] = x * 50
+
+    # Ensure minimum visibility
+    df["visual_size"] = np.maximum(df["visual_size"], 2)
 
     return df
 
@@ -176,15 +153,9 @@ def create_visual_sizes(df):
 # OPTIONAL FILTERING HELPER
 # =========================================================
 
-def filter_movies(
-    df,
-    min_ratings=50,
-    genre=None
-):
+def filter_movies(df, min_ratings=50, genre=None):
 
-    filtered = df[
-        df["rating_count"] >= min_ratings
-    ]
+    filtered = df[df["rating_count"] >= min_ratings]
 
     if genre:
         filtered = filtered[

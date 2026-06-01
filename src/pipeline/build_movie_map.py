@@ -1,3 +1,5 @@
+#src/pipeline/build_movie_map.py
+
 from pathlib import Path
 
 from src.preprocessing.load_data import load_raw_data
@@ -8,7 +10,7 @@ from src.preprocessing.feature_engineering import (
     create_macro_genres,
     create_visual_sizes
 )
-
+from src.clustering.region_labels import create_region_labels
 from src.embeddings.tfidf_pipeline import get_tfidf_embeddings
 from src.embeddings.dimensionality_reduction import get_umap_projection
 from src.clustering.clustering import compute_clusters
@@ -23,6 +25,13 @@ ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_PATH = ROOT / "data" / "processed" / "movie_map_v1.csv"
 
 OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+
+# =========================================================
+# CONFIG (NEW - ONLY ADDITION)
+# =========================================================
+
+VISUAL_SIZE_STRENGTH = 1.8   # controls bubble contrast (1.2 subtle → 2.5 dramatic)
 
 
 # =========================================================
@@ -81,17 +90,22 @@ final["umap_y"] = embedding[:, 1]
 # =========================================================
 
 print("\n[6/7] Creating visual + semantic features...")
+
 final = create_macro_genres(final)
-final = create_visual_sizes(final)
+
+# UPDATED: now uses contrast strength parameter
+final = create_visual_sizes(final, strength=VISUAL_SIZE_STRENGTH)
 
 
 # =========================================================
-# CLUSTERING (HDBSCAN)
+# CLUSTERING (HDBSCAN / KMEANS depending on your setup)
 # =========================================================
 
 print("\n[7/7] Computing clusters...")
 final = compute_clusters(final)
 
+print("Creating region labels...")
+final = create_region_labels(final)
 
 # =========================================================
 # EXPORT
