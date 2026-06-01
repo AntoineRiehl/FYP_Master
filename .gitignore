@@ -1,0 +1,65 @@
+# =========================
+# PYTHON
+# =========================
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# =========================
+# MODELS (IMPORTANT)
+# =========================
+models/
+*.pkl
+*.joblib
+
+# =========================
+# DATA (KEEP RAW ONLY IF SMALL)
+# =========================
+data/processed/
+data/raw
+data/intermediate/
+*.csv
+!data/raw/*.csv
+
+# =========================
+# JUPYTER NOTEBOOKS
+# =========================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# =========================
+# STREAMLIT
+# =========================
+.streamlit/
+
+# =========================
+# OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / EDITORS
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# LOGS
+# =========================
+*.log
+
+# =========================
+# LARGE ARTIFACTS
+# =========================
+*.h5
+*.pt
+*.bin
+
+Commands.txt
