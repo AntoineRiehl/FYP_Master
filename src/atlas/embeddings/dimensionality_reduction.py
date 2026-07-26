@@ -1,4 +1,4 @@
-# src/embeddings/dimensionality_reduction.py
+# src/atlas/embeddings/dimensionality_reduction.py
 
 import umap.umap_ as umap
 

@@ -62,4 +62,6 @@ Thumbs.db
 *.pt
 *.bin
 
+frontend/public/
+
 Commands.txt

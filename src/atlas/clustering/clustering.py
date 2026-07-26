@@ -1,4 +1,4 @@
-# src/clustering/clustering.py
+# src/atlas/clustering/clustering.py
 
 import hdbscan
 

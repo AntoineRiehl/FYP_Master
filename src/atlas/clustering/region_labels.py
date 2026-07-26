@@ -1,4 +1,4 @@
-#src/clustering/region_labels.py
+#src/atlas/clustering/region_labels.py
 
 import pandas as pd
 

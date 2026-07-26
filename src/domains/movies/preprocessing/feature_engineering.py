@@ -1,4 +1,4 @@
-#src/preprocessing/feature_engineering.py
+#src/domains/movies/preprocessing/feature_engineering.py
 
 import pandas as pd
 import numpy as np
@@ -163,3 +163,39 @@ def filter_movies(df, min_ratings=50, genre=None):
         ]
 
     return filtered
+
+# =========================================================
+# REGION LAYER
+# =========================================================
+
+def create_region_nodes(df):
+
+    region_df = (
+        df.groupby("cluster")
+        .agg(
+            umap_x=("umap_x", "mean"),
+            umap_y=("umap_y", "mean"),
+            visual_size=("visual_size", "mean"),
+            cluster_label=("cluster_label", "first"),
+            movie_count=("movieId", "count")
+        )
+        .reset_index()
+    )
+
+    return region_df
+
+
+# =========================================================
+# LANDMARK MOVIES
+# =========================================================
+
+def create_landmark_movies(
+    df,
+    min_ratings=1000
+):
+
+    landmarks = df[
+        df["rating_count"] >= min_ratings
+    ].copy()
+
+    return landmarks

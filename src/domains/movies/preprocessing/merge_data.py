@@ -1,4 +1,4 @@
-#src/preprocessing/merge_data.py
+#src/domains/movies/preprocessing/merge_data.py
 
 def compute_movie_stats(ratings):
 

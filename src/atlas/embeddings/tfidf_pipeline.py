@@ -1,4 +1,4 @@
-#src/embeddings/tfidf_pipeline.py
+#src/atlas/embeddings/tfidf_pipeline.py
 
 from pathlib import Path
 import joblib

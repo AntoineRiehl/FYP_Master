@@ -1,20 +1,22 @@
-#src/pipeline/build_movie_map.py
+#src/domains/movies/pipeline/build_movie_map.py
 
 from pathlib import Path
 
-from src.preprocessing.load_data import load_raw_data
-from src.preprocessing.merge_data import compute_movie_stats, merge_movies
-from src.preprocessing.feature_engineering import (
+from src.domains.movies.preprocessing.load_data import load_raw_data
+from src.domains.movies.preprocessing.merge_data import compute_movie_stats, merge_movies
+from src.domains.movies.preprocessing.feature_engineering import (
     compute_weighted_rating,
     concatenate_tags,
     create_macro_genres,
-    create_visual_sizes
+    create_visual_sizes,
+    create_region_nodes,
+    create_landmark_movies
 )
-from src.clustering.region_labels import create_region_labels
-from src.embeddings.tfidf_pipeline import get_tfidf_embeddings
-from src.embeddings.dimensionality_reduction import get_umap_projection
-from src.clustering.clustering import compute_clusters
-
+from src.atlas.clustering.region_labels import create_region_labels
+from src.atlas.embeddings.tfidf_pipeline import get_tfidf_embeddings
+from src.atlas.embeddings.dimensionality_reduction import get_umap_projection
+from src.atlas.clustering.clustering import compute_clusters
+import json
 
 # =========================================================
 # PATHS
@@ -108,7 +110,20 @@ print("Creating region labels...")
 final = create_region_labels(final)
 
 # =========================================================
-# EXPORT
+# LOD DATASETS
+# =========================================================
+
+print("Creating region nodes...")
+regions = create_region_nodes(final)
+
+print("Creating landmark movies...")
+landmarks = create_landmark_movies(
+    final,
+    min_ratings=1000
+)
+
+# =========================================================
+# EXPORT CSV
 # =========================================================
 
 final.to_csv(
@@ -116,5 +131,33 @@ final.to_csv(
     index=False
 )
 
+# =========================================================
+# EXPORT JSON
+# =========================================================
+
+JSON_DIR = ROOT / "frontend" / "public" / "data" / "movies"
+
+JSON_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+# full movie universe
+final.to_json(
+    JSON_DIR / "atlas.json",
+    orient="records"
+)
+
+# region layer
+regions.to_json(
+    JSON_DIR / "regions.json",
+    orient="records"
+)
+
+# landmark layer
+landmarks.to_json(
+    JSON_DIR / "landmarks.json",
+    orient="records"
+)
+
 print("\n✅ Pipeline complete!")
-print(f"Saved to: {OUTPUT_PATH}")
