@@ -1,23 +1,58 @@
-//frontend/App.tsx
+//frontend/src/App.tsx
 
-import { useEffect, useState } from "react";
-import UniverseCanvas from "./components/UniverseCanvas";
-import type { MovieNode } from "./types/movie";
+import { useState } from "react";
+
+import AtlasLayout from "./components/AtlasLayout";
+import { useAtlas } from "./hooks/useAtlas";
+
 
 function App() {
-  const [data, setData] = useState<MovieNode[]>([]);
 
-  useEffect(() => {
-    fetch("/public/data/movie_map.json")
-      .then((res) => res.json())
-      .then(setData);
-  }, []);
+    const [atlasName, setAtlasName] =
+        useState("movies");
 
-  return (
-    <div>
-      <UniverseCanvas data={data} />
-    </div>
-  );
+
+    const atlas =
+        useAtlas(atlasName);
+
+
+
+    if (!atlas) {
+
+        return (
+
+            <div
+                style={{
+                    width:"100vw",
+                    height:"100vh",
+                    display:"flex",
+                    justifyContent:"center",
+                    alignItems:"center",
+                    background:"#050816",
+                    color:"white"
+                }}
+            >
+                Loading atlas...
+
+            </div>
+
+        );
+
+    }
+
+
+
+    return (
+
+        <AtlasLayout
+            data={atlas}
+            atlasName={atlasName}
+            onAtlasChange={setAtlasName}
+        />
+
+    );
+
 }
+
 
 export default App;
