@@ -1,3 +1,5 @@
+// frontend/src/components/UniverseCanvas.tsx
+
 import {
     useEffect,
     useRef
@@ -29,13 +31,19 @@ type Props = {
 
     data: AtlasNode[];
 
+    onHover:
+        (node: AtlasNode | null) => void;
+
 };
 
 
 
 export default function UniverseCanvas({
-    data
-}: Props) {
+
+    data,
+    onHover
+
+}:Props){
 
 
     const canvasRef =
@@ -43,7 +51,12 @@ export default function UniverseCanvas({
 
 
 
-    useEffect(() => {
+    const hoveredRef =
+        useRef<AtlasNode | null>(null);
+
+
+
+    useEffect(()=>{
 
 
         const canvas =
@@ -55,13 +68,16 @@ export default function UniverseCanvas({
 
 
 
-        function resize() {
+        function resize(){
+
 
             const parent =
                 canvas.parentElement;
 
 
-            if (!parent) return;
+            if(!parent)
+                return;
+
 
 
             canvas.width =
@@ -70,11 +86,13 @@ export default function UniverseCanvas({
 
             canvas.height =
                 parent.clientHeight;
+
         }
 
 
 
         resize();
+
 
 
         window.addEventListener(
@@ -104,20 +122,46 @@ export default function UniverseCanvas({
 
 
 
-        function frame() {
+        function frame(){
 
 
-            renderUniverse(
-                ctx,
-                canvas,
-                camera,
-                data,
-                mouse
-            );
+            const hovered =
+                renderUniverse(
+                    ctx,
+                    canvas,
+                    camera,
+                    data,
+                    mouse
+                );
+
+
+
+            const previous =
+                hoveredRef.current;
+
+
+
+            if(
+                previous?.id !== hovered?.id
+            ){
+
+                hoveredRef.current =
+                    hovered;
+
+
+                onHover(
+                    hovered
+                );
+
+            }
+
 
 
             animation =
-                requestAnimationFrame(frame);
+                requestAnimationFrame(
+                    frame
+                );
+
         }
 
 
@@ -126,7 +170,7 @@ export default function UniverseCanvas({
 
 
 
-        return () => {
+        return ()=>{
 
 
             cancelAnimationFrame(
@@ -146,22 +190,35 @@ export default function UniverseCanvas({
         };
 
 
-    }, [data]);
+    },[
+        data,
+        onHover
+    ]);
 
 
 
     return (
 
         <canvas
+
             ref={canvasRef}
+
             style={{
+
                 width:"100%",
+
                 height:"100%",
+
                 display:"block",
+
                 background:"#050816",
+
                 cursor:"grab"
+
             }}
+
         />
 
     );
+
 }

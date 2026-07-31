@@ -15,6 +15,9 @@ export type AtlasNode = {
 
     popularity?: number;
     category?: string;
+
+    rating?: number;
+    description?: string;
 };
 
 export type RegionNode = {

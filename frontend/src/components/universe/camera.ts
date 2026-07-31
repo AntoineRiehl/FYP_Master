@@ -1,29 +1,62 @@
 //frontend/src/components/universe/camera.ts
 
 export type Camera = {
-    x: number;
-    y: number;
-    zoom: number;
+
+    x:number;
+
+    y:number;
+
+    zoom:number;
+
 };
 
 
-export function createCamera(): Camera {
+
+export function createCamera():Camera {
+
     return {
-        x: 0,
-        y: 0,
-        zoom: 20
+
+        x:0,
+
+        y:0,
+
+        zoom:40
+
     };
+
 }
 
 
+
 export function worldToScreen(
-    camera: Camera,
-    canvas: HTMLCanvasElement,
-    x: number,
-    y: number
-) {
+
+    camera:Camera,
+
+    canvas:HTMLCanvasElement,
+
+    x:number,
+
+    y:number
+
+){
+
     return {
-        x: (x - camera.x) * camera.zoom + canvas.width / 2,
-        y: (y - camera.y) * camera.zoom + canvas.height / 2
+
+        x:
+            (x-camera.x)
+            *
+            camera.zoom
+            +
+            canvas.width/2,
+
+
+        y:
+            (y-camera.y)
+            *
+            camera.zoom
+            +
+            canvas.height/2
+
     };
+
 }

@@ -1,11 +1,15 @@
 // frontend/src/components/AtlasLayout.tsx
 
+import { useState } from "react";
+
 import UniverseCanvas from "./UniverseCanvas";
 import Sidebar from "./Sidebar";
 import DetailsPanel from "./DetailsPanel";
 
-import type { AtlasData } from "../types/atlas";
-
+import type {
+    AtlasData,
+    AtlasNode
+} from "../types/atlas";
 
 type Props = {
 
@@ -18,14 +22,19 @@ type Props = {
 
 };
 
-
-
 export default function AtlasLayout({
+
     data,
     atlasName,
     onAtlasChange
-}:Props) {
 
+}:Props){
+
+    const [
+        hoveredNode,
+        setHoveredNode
+    ] =
+        useState<AtlasNode | null>(null);
 
     return (
 
@@ -40,13 +49,10 @@ export default function AtlasLayout({
             }}
         >
 
-
             <Sidebar
                 atlasName={atlasName}
                 onAtlasChange={onAtlasChange}
             />
-
-
 
             <div
                 style={{
@@ -57,14 +63,14 @@ export default function AtlasLayout({
 
                 <UniverseCanvas
                     data={data.atlas}
+                    onHover={setHoveredNode}
                 />
 
             </div>
 
-
-
-            <DetailsPanel />
-
+            <DetailsPanel
+                node={hoveredNode}
+            />
 
         </div>
 
