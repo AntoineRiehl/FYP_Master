@@ -1,16 +1,24 @@
 //frontend/src/components/universe/renderer/drawRegions.ts
 
-import type { AtlasNode } from "../../../types/atlas";
+import type {
+    RegionNode
+} from "../../../types/atlas";
 
-import type { Camera } from "../camera";
+
+import type {
+    Camera
+} from "../camera";
+
 
 import {
     worldToScreen
 } from "../camera";
 
+
 import {
     clusterColor
 } from "../colors";
+
 
 import {
     sampleArray
@@ -19,73 +27,117 @@ import {
 
 
 export function drawRegions(
+
     ctx:CanvasRenderingContext2D,
+
     canvas:HTMLCanvasElement,
+
     camera:Camera,
-    data:AtlasNode[]
+
+    regions:RegionNode[]
+
 ){
 
 
-    const regions =
+    const visibleRegions =
+
         sampleArray(
-            [
-                ...new Map(
-                    data.map(
-                        d=>[
-                            d.cluster,
-                            d
-                        ]
-                    )
-                ).values()
-            ],
-            12
+
+            regions,
+
+            50
+
         );
 
 
 
-    for(const r of regions){
+    for(const region of visibleRegions){
+
 
 
         const pos =
+
             worldToScreen(
+
                 camera,
+
                 canvas,
-                r.umap_x,
-                r.umap_y
+
+                region.x,
+
+                region.y
+
             );
 
 
-        const radius=28;
+
+        const radius =
+
+            Math.max(
+
+                20,
+
+                Math.sqrt(
+                    region.size
+                ) * 5
+
+            );
+
 
 
         ctx.beginPath();
 
+
+
         ctx.arc(
+
             pos.x,
+
             pos.y,
+
             radius,
+
             0,
+
             Math.PI*2
+
         );
 
 
+
         ctx.fillStyle =
-            clusterColor(r.cluster);
+
+            region.color
+
+            ??
+
+            clusterColor(
+                region.id
+            );
+
 
 
         ctx.fill();
 
 
 
-        ctx.fillStyle="white";
+        ctx.fillStyle =
+            "white";
 
-        ctx.font="13px Arial";
+
+        ctx.font =
+            "13px Arial";
+
 
 
         ctx.fillText(
-            r.cluster_label ?? "Region",
+
+            region.label ?? "Region",
+
             pos.x+10,
+
             pos.y
+
         );
 
     }

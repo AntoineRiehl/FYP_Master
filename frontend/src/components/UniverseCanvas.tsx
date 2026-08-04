@@ -7,6 +7,7 @@ import {
 
 
 import type {
+    AtlasData,
     AtlasNode
 } from "../types/atlas";
 
@@ -29,10 +30,10 @@ import {
 
 type Props = {
 
-    data: AtlasNode[];
+    data: AtlasData;
 
     onHover:
-        (node: AtlasNode | null) => void;
+        (node:AtlasNode|null)=>void;
 
 };
 
@@ -50,9 +51,8 @@ export default function UniverseCanvas({
         useRef<HTMLCanvasElement>(null);
 
 
-
     const hoveredRef =
-        useRef<AtlasNode | null>(null);
+        useRef<AtlasNode|null>(null);
 
 
 
@@ -70,14 +70,12 @@ export default function UniverseCanvas({
 
         function resize(){
 
-
             const parent =
                 canvas.parentElement;
 
 
             if(!parent)
                 return;
-
 
 
             canvas.width =
@@ -92,7 +90,6 @@ export default function UniverseCanvas({
 
 
         resize();
-
 
 
         window.addEventListener(
@@ -136,13 +133,10 @@ export default function UniverseCanvas({
 
 
 
-            const previous =
-                hoveredRef.current;
-
-
-
             if(
-                previous?.id !== hovered?.id
+                hoveredRef.current?.id
+                !==
+                hovered?.id
             ){
 
                 hoveredRef.current =
@@ -165,7 +159,6 @@ export default function UniverseCanvas({
         }
 
 
-
         frame();
 
 
@@ -181,11 +174,11 @@ export default function UniverseCanvas({
             cleanup();
 
 
-
             window.removeEventListener(
                 "resize",
                 resize
             );
+
 
         };
 

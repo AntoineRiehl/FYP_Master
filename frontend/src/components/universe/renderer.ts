@@ -1,20 +1,30 @@
 //frontend/src/components/universe/renderer.ts
 
-import type { AtlasNode } from "../../types/atlas";
+import type {
+    AtlasData,
+    AtlasNode
+} from "../../types/atlas";
 
-import type { Camera } from "./camera";
+
+import type {
+    Camera
+} from "./camera";
+
 
 import {
     getLOD
 } from "./lod";
 
+
 import {
     drawRegions
 } from "./renderer/drawRegions";
 
+
 import {
     drawNodes
 } from "./renderer/drawNodes";
+
 
 import {
     detectHover
@@ -25,9 +35,13 @@ import {
 export function renderUniverse(
 
     ctx:CanvasRenderingContext2D,
+
     canvas:HTMLCanvasElement,
+
     camera:Camera,
-    data:AtlasNode[],
+
+    data:AtlasData,
+
     mouse:{
         x:number;
         y:number;
@@ -54,23 +68,27 @@ export function renderUniverse(
 
     if(mode===0){
 
+
         drawRegions(
             ctx,
             canvas,
             camera,
-            data
+            data.regions
         );
+
 
     }
     else{
+
 
         drawNodes(
             ctx,
             canvas,
             camera,
-            data,
+            data.atlas,
             mode
         );
+
 
     }
 
@@ -80,13 +98,14 @@ export function renderUniverse(
         detectHover(
             canvas,
             camera,
-            data,
+            data.atlas,
             mouse
         );
 
 
 
     if(hovered){
+
 
         ctx.fillStyle =
             "rgba(0,0,0,0.75)";
@@ -100,15 +119,22 @@ export function renderUniverse(
         );
 
 
-        ctx.fillStyle="white";
+        ctx.fillStyle =
+            "white";
 
-        ctx.font="12px Arial";
+
+        ctx.font =
+            "12px Arial";
 
 
         ctx.fillText(
-            hovered.label,
+
+            hovered.title,
+
             mouse.x+15,
+
             mouse.y+28
+
         );
 
     }

@@ -62,7 +62,7 @@ export default function AtlasLayout({
             >
 
                 <UniverseCanvas
-                    data={data.atlas}
+                    data={data}
                     onHover={setHoveredNode}
                 />
 
