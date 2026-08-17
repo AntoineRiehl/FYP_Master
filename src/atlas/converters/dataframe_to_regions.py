@@ -36,6 +36,11 @@ def dataframe_to_regions(
             label=(
                 "cluster_label",
                 "first"
+            )
+            if "cluster_label" in df.columns
+            else (
+                "cluster",
+                "first"
             ),
 
             item_count=(
@@ -60,34 +65,21 @@ def dataframe_to_regions(
 
     for _, row in grouped.iterrows():
 
-
         regions.append(
 
             Region(
 
-                id=int(
-                    row.cluster
-                ),
+                id=int(row.cluster),
 
-                label=str(
-                    row.label
-                ),
+                label=str(row.label),
 
-                x=float(
-                    row.x
-                ),
+                x=float(row.x),
 
-                y=float(
-                    row.y
-                ),
+                y=float(row.y),
 
-                size=float(
-                    row.size
-                ),
+                size=float(row.size),
 
-                item_count=int(
-                    row.item_count
-                )
+                item_count=int(row.item_count)
 
             )
 

@@ -1,5 +1,8 @@
 // frontend/src/components/Sidebar.tsx
 
+import type { AtlasNode } from "../types/atlas";
+
+
 type Props = {
 
     atlasName:string;
@@ -7,13 +10,33 @@ type Props = {
     onAtlasChange:
         (name:string)=>void;
 
+
+    searchQuery:string;
+
+    onSearchChange:
+        (query:string)=>void;
+
+
+    searchResults:AtlasNode[];
+
+    onSelectResult:
+        (node:AtlasNode)=>void;
+
 };
 
 
 
 export default function Sidebar({
+
     atlasName,
-    onAtlasChange
+    onAtlasChange,
+
+    searchQuery,
+    onSearchChange,
+
+    searchResults,
+    onSelectResult
+
 }:Props) {
 
 
@@ -26,7 +49,8 @@ export default function Sidebar({
                 background:"#0b1020",
                 borderRight:
                     "1px solid rgba(255,255,255,0.1)",
-                boxSizing:"border-box"
+                boxSizing:"border-box",
+                overflowY:"auto"
             }}
         >
 
@@ -73,9 +97,7 @@ export default function Sidebar({
                         width:"100%",
                         padding:"8px",
                         background:"#111827",
-                        color:"white",
-                        border:
-                            "1px solid rgba(255,255,255,0.2)"
+                        color:"white"
                     }}
 
                 >
@@ -84,11 +106,9 @@ export default function Sidebar({
                         Movies
                     </option>
 
-
                     <option value="music">
                         Music
                     </option>
-
 
                     <option value="restaurants">
                         Restaurants
@@ -120,6 +140,14 @@ export default function Sidebar({
 
                 <input
 
+                    value={searchQuery}
+
+                    onChange={(e)=>
+                        onSearchChange(
+                            e.target.value
+                        )
+                    }
+
                     placeholder="Search..."
 
                     style={{
@@ -127,45 +155,58 @@ export default function Sidebar({
                         padding:"8px",
                         background:"#111827",
                         color:"white",
-                        border:
-                            "1px solid rgba(255,255,255,0.2)",
                         boxSizing:"border-box"
                     }}
 
                 />
 
 
+
+                {
+                    searchResults.length > 0 && (
+
+                        <div
+                            style={{
+                                marginTop:"10px"
+                            }}
+                        >
+
+                            {
+                                searchResults.map(node=>(
+
+                                    <div
+
+                                        key={node.id}
+
+                                        onClick={()=>
+                                            onSelectResult(node)
+                                        }
+
+                                        style={{
+                                            padding:"6px",
+                                            cursor:"pointer",
+                                            borderBottom:
+                                                "1px solid rgba(255,255,255,0.1)"
+                                        }}
+
+                                    >
+
+                                        {node.title}
+
+                                    </div>
+
+                                ))
+
+                            }
+
+                        </div>
+
+                    )
+                }
+
+
             </section>
 
-
-
-            <section
-                style={{
-                    marginTop:"30px"
-                }}
-            >
-
-                <h3
-                    style={{
-                        fontSize:"14px",
-                        opacity:0.7
-                    }}
-                >
-                    Filters
-                </h3>
-
-
-                <p
-                    style={{
-                        opacity:0.5,
-                        fontSize:"13px"
-                    }}
-                >
-                    Filters coming soon...
-                </p>
-
-
-            </section>
 
 
         </aside>

@@ -5,34 +5,34 @@ import {
     useRef
 } from "react";
 
-
 import type {
     AtlasData,
     AtlasNode
 } from "../types/atlas";
 
-
 import {
     createCamera
 } from "./universe/camera";
-
 
 import {
     setupMouse
 } from "./universe/mouse";
 
-
 import {
     renderUniverse
 } from "./universe/renderer";
+
+import {
+    detectSelection
+} from "./universe/renderer/select";
 
 
 
 type Props = {
 
-    data: AtlasData;
+    data:AtlasData;
 
-    onHover:
+    onSelect:
         (node:AtlasNode|null)=>void;
 
 };
@@ -42,7 +42,8 @@ type Props = {
 export default function UniverseCanvas({
 
     data,
-    onHover
+
+    onSelect
 
 }:Props){
 
@@ -50,21 +51,23 @@ export default function UniverseCanvas({
     const canvasRef =
         useRef<HTMLCanvasElement>(null);
 
-
-    const hoveredRef =
-        useRef<AtlasNode|null>(null);
+    // IMPORTANT:
+    // Camera is created ONCE and survives re-renders.
+    const cameraRef =
+        useRef(createCamera());
 
 
 
     useEffect(()=>{
 
-
         const canvas =
             canvasRef.current!;
 
-
         const ctx =
             canvas.getContext("2d")!;
+
+        const camera =
+            cameraRef.current;
 
 
 
@@ -73,14 +76,11 @@ export default function UniverseCanvas({
             const parent =
                 canvas.parentElement;
 
-
             if(!parent)
                 return;
 
-
             canvas.width =
                 parent.clientWidth;
-
 
             canvas.height =
                 parent.clientHeight;
@@ -91,7 +91,6 @@ export default function UniverseCanvas({
 
         resize();
 
-
         window.addEventListener(
             "resize",
             resize
@@ -99,18 +98,38 @@ export default function UniverseCanvas({
 
 
 
-        const camera =
-            createCamera();
-
-
-
-        const {
+        const{
             mouse,
             cleanup
-        } =
+        }=
             setupMouse(
+
                 canvas,
-                camera
+
+                camera,
+
+                (x,y)=>{
+
+                    const selected =
+                        detectSelection(
+
+                            canvas,
+
+                            camera,
+
+                            data.atlas,
+
+                            {
+                                x,
+                                y
+                            }
+
+                        );
+
+                    onSelect(selected);
+
+                }
+
             );
 
 
@@ -121,35 +140,19 @@ export default function UniverseCanvas({
 
         function frame(){
 
+            renderUniverse(
 
-            const hovered =
-                renderUniverse(
-                    ctx,
-                    canvas,
-                    camera,
-                    data,
-                    mouse
-                );
+                ctx,
 
+                canvas,
 
+                camera,
 
-            if(
-                hoveredRef.current?.id
-                !==
-                hovered?.id
-            ){
+                data,
 
-                hoveredRef.current =
-                    hovered;
+                mouse
 
-
-                onHover(
-                    hovered
-                );
-
-            }
-
-
+            );
 
             animation =
                 requestAnimationFrame(
@@ -159,38 +162,34 @@ export default function UniverseCanvas({
         }
 
 
+
         frame();
 
 
 
-        return ()=>{
-
+        return()=>{
 
             cancelAnimationFrame(
                 animation
             );
 
-
             cleanup();
-
 
             window.removeEventListener(
                 "resize",
                 resize
             );
 
-
         };
-
 
     },[
         data,
-        onHover
+        onSelect
     ]);
 
 
 
-    return (
+    return(
 
         <canvas
 

@@ -1,0 +1,201 @@
+#src/domains/movies/preprocessing/feature_engineering.py
+
+import pandas as pd
+import numpy as np
+
+
+# =========================================================
+# WEIGHTED / BAYESIAN RATING
+# =========================================================
+
+def compute_weighted_rating(df):
+
+    # Global mean rating
+    C = df["avg_rating"].mean()
+
+    # Minimum vote threshold (Bayesian shrinkage strength)
+    m = df["rating_count"].quantile(0.75)
+
+    # Bayesian weighted rating
+    df["weighted_rating"] = (
+        (df["avg_rating"] * df["rating_count"]) + (C * m)
+    ) / (df["rating_count"] + m)
+
+    return df
+
+
+# =========================================================
+# CONCATENATE TAGS
+# =========================================================
+
+def concatenate_tags(tags_df):
+
+    # Remove missing tags
+    tags_clean = tags_df.dropna(subset=["tag"]).copy()
+
+    # Ensure string
+    tags_clean["tag"] = tags_clean["tag"].astype(str)
+
+    # Group tags per movie
+    movie_tags = (
+        tags_clean
+        .groupby("movieId")["tag"]
+        .apply(lambda x: " ".join(x))
+        .reset_index()
+    )
+
+    movie_tags.rename(
+        columns={"tag": "tags_text"},
+        inplace=True
+    )
+
+    return movie_tags
+
+
+# =========================================================
+# MACRO GENRE MAPPING
+# =========================================================
+
+def map_macro_genre(genre_str):
+
+    if pd.isna(genre_str):
+        return "Unknown"
+
+    genre_str = str(genre_str).strip()
+    genres = genre_str.split("|")
+
+    mapping = {
+
+        "Sci-Fi/Fantasy": ["Sci-Fi", "Fantasy"],
+
+        "Action/Adventure": ["Action", "Adventure", "War", "Western"],
+
+        "Thriller/Horror": ["Thriller", "Horror", "Crime", "Mystery", "Film-Noir"],
+
+        "Comedy": ["Comedy", "Musical"],
+
+        "Drama": ["Drama"],
+
+        "Family/Animation": ["Animation", "Children's"],
+
+        "Documentary": ["Documentary"]
+    }
+
+    for macro, group in mapping.items():
+        if any(g in genres for g in group):
+            return macro
+
+    return "Other"
+
+
+# =========================================================
+# APPLY MACRO GENRES
+# =========================================================
+
+def create_macro_genres(df):
+
+    df["macro_genre"] = (
+        df["genres"]
+        .apply(map_macro_genre)
+        .astype(str)
+        .str.strip()
+    )
+
+    df["genre_count"] = (
+        df["genres"]
+        .fillna("")
+        .apply(lambda x: len(str(x).split("|")))
+    )
+
+    return df
+
+
+# =========================================================
+# VISUAL SIZE ENGINEERING (IMPROVED CONTRAST VERSION)
+# =========================================================
+
+def create_visual_sizes(df, strength=1.8):
+
+    """
+    strength:
+        controls how aggressively blockbuster vs niche separation is amplified
+        1.0 = original
+        1.8 = recommended (your current goal)
+        2.5+ = very dramatic / game-like bubble map
+    """
+
+    # Base importance signal
+    base = np.log1p(df["rating_count"]) * df["weighted_rating"]
+
+    # Normalize safely
+    min_v = base.min()
+    max_v = base.max()
+
+    if max_v == min_v:
+        df["visual_size"] = 5
+        return df
+
+    x = (base - min_v) / (max_v - min_v)
+
+    # Non-linear contrast boost (this is the key upgrade)
+    x = np.power(x, strength)
+
+    # Scale to usable UI range
+    df["visual_size"] = x * 50
+
+    # Ensure minimum visibility
+    df["visual_size"] = np.maximum(df["visual_size"], 2)
+
+    return df
+
+
+# =========================================================
+# OPTIONAL FILTERING HELPER
+# =========================================================
+
+def filter_movies(df, min_ratings=50, genre=None):
+
+    filtered = df[df["rating_count"] >= min_ratings]
+
+    if genre:
+        filtered = filtered[
+            filtered["macro_genre"] == genre
+        ]
+
+    return filtered
+
+# =========================================================
+# REGION LAYER
+# =========================================================
+
+def create_region_nodes(df):
+
+    region_df = (
+        df.groupby("cluster")
+        .agg(
+            umap_x=("umap_x", "mean"),
+            umap_y=("umap_y", "mean"),
+            visual_size=("visual_size", "mean"),
+            cluster_label=("cluster_label", "first"),
+            movie_count=("movieId", "count")
+        )
+        .reset_index()
+    )
+
+    return region_df
+
+
+# =========================================================
+# LANDMARK MOVIES
+# =========================================================
+
+def create_landmark_movies(
+    df,
+    min_ratings=1000
+):
+
+    landmarks = df[
+        df["rating_count"] >= min_ratings
+    ].copy()
+
+    return landmarks

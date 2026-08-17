@@ -1,6 +1,4 @@
-#src/atlas/builders/build_bundle.py
-
-from pathlib import Path
+# src/atlas/builders/build_bundle.py
 
 import pandas as pd
 
@@ -26,11 +24,20 @@ def build_bundle(
     metadata=None
 ):
 
-    atlas_items = dataframe_to_items(df)
+    atlas_items = dataframe_to_items(
+        df,
+        domain
+    )
 
-    regions = dataframe_to_regions(df)
 
-    landmarks = dataframe_to_landmarks(df)
+    regions = dataframe_to_regions(
+        df
+    )
+
+
+    landmarks = dataframe_to_landmarks(
+        df
+    )
 
 
     return AtlasBundle(

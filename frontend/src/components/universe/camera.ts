@@ -12,9 +12,9 @@ export type Camera = {
 
 
 
-export function createCamera():Camera {
+export function createCamera():Camera{
 
-    return {
+    return{
 
         x:0,
 
@@ -40,7 +40,7 @@ export function worldToScreen(
 
 ){
 
-    return {
+    return{
 
         x:
             (x-camera.x)
@@ -48,7 +48,6 @@ export function worldToScreen(
             camera.zoom
             +
             canvas.width/2,
-
 
         y:
             (y-camera.y)
@@ -58,5 +57,31 @@ export function worldToScreen(
             canvas.height/2
 
     };
+
+}
+
+
+
+export function flyTo(
+
+    camera:Camera,
+
+    x:number,
+
+    y:number,
+
+    zoom?:number
+
+){
+
+    camera.x = x;
+
+    camera.y = y;
+
+    if(zoom !== undefined){
+
+        camera.zoom = zoom;
+
+    }
 
 }

@@ -1,0 +1,46 @@
+src/
+│
+├── atlas/
+│   │
+│   ├── schema/
+│   │   ├── atlas_item.py
+│   │   ├── atlas_bundle.py
+│   │   ├── feature_config.py
+│   │   ├── region.py
+│   │   └── landmark.py
+│   │
+│   ├── converters/
+│   │   ├── dataframe_to_items.py
+│   │   ├── dataframe_to_regions.py
+│   │   └── dataframe_to_landmarks.py
+│   │
+│   ├── builders/
+│   │   └── build_bundle.py
+│   │
+│   ├── embeddings/
+│   │   ├── tfidf_pipeline.py
+│   │   └── ...
+│   │
+│   ├── clustering/
+│   │   ├── clustering.py
+│   │   └── region_labels.py
+│   │
+│   ├── export/
+│   │   └── export_bundle.py
+│   │
+│   └── cross_domain/
+│       ├── combine_data.py
+│       ├── semantic_text.py
+│       └── domain_vocabulary.py
+│
+├── domains/
+│   ├── movies/
+│   ├── music/
+│   └── restaurants/
+│
+└── pipelines/
+    ├── build_movie_map.py
+    ├── build_music_map.py
+    ├── build_restaurants_map.py
+    ├── build_movies_music_atlas.py
+    └── build_all_domains_atlas.py

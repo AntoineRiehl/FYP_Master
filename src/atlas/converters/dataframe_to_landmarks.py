@@ -44,41 +44,24 @@ def dataframe_to_landmarks(
 
 
             source_id = str(
-
                 row.get(
-                    "movieId",
-
+                    "source_id",
                     row.get(
-                        "business_id",
-
-                        row.get(
-                            "mbid"
-                        )
+                        "id",
+                        ""
                     )
-
                 )
-
             )
 
 
-            label=(
-
-                row.get(
-                    "title"
-                )
-
+            label = (
+                row.get("title")
                 or
-
-                row.get(
-                    "artist_lastfm"
-                )
-
+                row.get("artist_lastfm")
                 or
-
-                row.get(
-                    "name"
-                )
-
+                row.get("name")
+                or
+                "Unknown"
             )
 
 

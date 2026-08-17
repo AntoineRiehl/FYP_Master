@@ -1,0 +1,320 @@
+# src/pipelines/build_restaurants_map.py
+
+from pathlib import Path
+
+from src.domains.restaurants.load_data import (
+    load_raw_data
+)
+
+from src.domains.restaurants.feature_engineering import (
+    filter_restaurants,
+    create_tags_text,
+    compute_popularity_score,
+    create_visual_sizes,
+    create_macro_genres
+)
+
+from src.atlas.embeddings.tfidf_pipeline import (
+    get_tfidf_embeddings
+)
+
+from src.atlas.embeddings.dimensionality_reduction import (
+    get_umap_projection
+)
+
+from src.atlas.clustering.clustering import (
+    compute_clusters
+)
+
+from src.atlas.clustering.region_labels import (
+    create_region_labels
+)
+
+from src.atlas.schema.feature_config import (
+    FeatureConfig
+)
+
+from src.atlas.builders.build_bundle import (
+    build_bundle
+)
+
+from src.atlas.export.export_bundle import (
+    export_bundle
+)
+
+
+# =========================================================
+# PATHS
+# =========================================================
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+OUTPUT_PATH = (
+    ROOT
+    / "data"
+    / "processed"
+    / "restaurant_map_v1.csv"
+)
+
+
+OUTPUT_PATH.parent.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+
+JSON_DIR = (
+    ROOT
+    / "frontend"
+    / "public"
+    / "data"
+    / "restaurants"
+)
+
+
+# =========================================================
+# FEATURE CONFIGURATION
+# =========================================================
+
+FEATURE_CONFIG = FeatureConfig(
+
+    name="restaurants_categories_tips",
+
+    use_tags=True,
+
+    use_categories=True,
+
+    use_reviews=False,
+
+    use_metadata=True,
+
+    use_statistics=True
+
+)
+
+
+# =========================================================
+# CONFIG
+# =========================================================
+
+MIN_REVIEWS = 20
+
+VISUAL_SIZE_STRENGTH = 1.8
+
+
+# =========================================================
+# LOAD DATA
+# =========================================================
+
+print("\n[1/8] Loading restaurant dataset...")
+
+
+businesses, reviews, tips = load_raw_data()
+
+
+
+# =========================================================
+# PREPROCESSING
+# =========================================================
+
+print("\n[2/8] Filtering restaurants...")
+
+
+restaurants = filter_restaurants(
+
+    businesses,
+
+    min_reviews=MIN_REVIEWS
+
+)
+
+
+print(
+    f"Restaurants remaining: {len(restaurants):,}"
+)
+
+
+
+# =========================================================
+# TEXT PROCESSING
+# =========================================================
+
+print("\n[3/8] Processing categories + tips...")
+
+
+restaurants = create_tags_text(
+
+    restaurants,
+
+    tips
+
+)
+
+
+
+# =========================================================
+# FEATURE ENGINEERING
+# =========================================================
+
+print("\nCreating atlas features...")
+
+
+restaurants = compute_popularity_score(
+
+    restaurants
+
+)
+
+
+restaurants = create_visual_sizes(
+
+    restaurants,
+
+    strength=VISUAL_SIZE_STRENGTH
+
+)
+
+
+restaurants = create_macro_genres(
+
+    restaurants
+
+)
+
+
+
+# =========================================================
+# EMBEDDINGS
+# =========================================================
+
+print("\n[4/8] Building TF-IDF embeddings...")
+
+
+tfidf_matrix, vectorizer = (
+    get_tfidf_embeddings(
+        restaurants,
+        text_column="tags_text",
+        model_name="restaurants_tags"
+    )
+)
+
+
+
+# =========================================================
+# UMAP
+# =========================================================
+
+print("\n[5/8] Computing UMAP projection...")
+
+
+embedding, umap_model = (
+
+    get_umap_projection(
+
+        tfidf_matrix
+
+    )
+
+)
+
+
+restaurants["umap_x"] = embedding[:, 0]
+
+restaurants["umap_y"] = embedding[:, 1]
+
+
+
+# =========================================================
+# CLUSTERING
+# =========================================================
+
+print("\n[6/8] Computing clusters...")
+
+
+restaurants = compute_clusters(
+
+    restaurants
+
+)
+
+
+restaurants = create_region_labels(
+
+    restaurants
+
+)
+
+
+
+# =========================================================
+# EXPORT ANALYSIS DATASET
+# =========================================================
+
+print("\nSaving analysis dataframe...")
+
+
+restaurants.to_csv(
+
+    OUTPUT_PATH,
+
+    index=False
+
+)
+
+
+
+# =========================================================
+# BUILD ATLAS BUNDLE
+# =========================================================
+
+print("\n[7/8] Building AtlasBundle...")
+
+
+bundle = build_bundle(
+
+    df=restaurants,
+
+    domain="restaurants",
+
+    feature_config=FEATURE_CONFIG,
+
+    metadata={
+
+        "pipeline": "restaurant_map",
+
+        "visual_size_strength": VISUAL_SIZE_STRENGTH,
+
+        "embedding": "TF-IDF",
+
+        "projection": "UMAP",
+
+        "items": len(restaurants),
+
+        "clusters": int(
+            restaurants["cluster"].nunique()
+        )
+
+    }
+
+)
+
+
+
+# =========================================================
+# EXPORT FRONTEND DATA
+# =========================================================
+
+print("\n[8/8] Exporting AtlasBundle...")
+
+
+export_bundle(
+
+    bundle,
+
+    JSON_DIR
+
+)
+
+
+print("\n✅ Restaurant Atlas complete!")
