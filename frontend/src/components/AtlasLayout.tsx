@@ -1,16 +1,21 @@
 // frontend/src/components/AtlasLayout.tsx
 
-// frontend/src/components/AtlasLayout.tsx
 
 import {
     useEffect,
+    useMemo,
     useState
 } from "react";
 
 
-import UniverseCanvas from "./UniverseCanvas";
-import Sidebar from "./Sidebar";
-import DetailsPanel from "./DetailsPanel";
+import UniverseCanvas
+    from "./UniverseCanvas";
+
+import Sidebar
+    from "./Sidebar";
+
+import DetailsPanel
+    from "./DetailsPanel";
 
 
 import type {
@@ -22,6 +27,17 @@ import type {
 import type {
     ColorMode
 } from "../config/colorMode";
+
+
+import type {
+    AtlasFilters
+} from "../types/filters";
+
+
+import {
+    filterNodes,
+    getAvailableDomains
+} from "../utils/filterNodes";
 
 
 // =====================================================
@@ -56,6 +72,23 @@ export default function AtlasLayout({
 
 
     // =================================================
+    // AVAILABLE DOMAINS
+    // =================================================
+
+    const availableDomains =
+        useMemo(
+
+            () =>
+                getAvailableDomains(
+                    data.atlas
+                ),
+
+            [data.atlas]
+
+        );
+
+
+    // =================================================
     // SELECTED NODE
     // =================================================
 
@@ -63,7 +96,9 @@ export default function AtlasLayout({
         selectedNode,
         setSelectedNode
     ] =
-    useState<AtlasNode | null>(null);
+    useState<AtlasNode | null>(
+        null
+    );
 
 
     // =================================================
@@ -85,11 +120,55 @@ export default function AtlasLayout({
         colorMode,
         setColorMode
     ] =
-    useState<ColorMode>("cluster");
+    useState<ColorMode>(
+        "cluster"
+    );
 
 
     // =================================================
-    // RESET SELECTION WHEN ATLAS CHANGES
+    // FILTERS
+    // =================================================
+
+    const [
+        filters,
+        setFilters
+    ] =
+    useState<AtlasFilters>({
+
+        domains: [],
+
+        reviewsOnly: false,
+
+        balanceMode: "all"
+
+    });
+
+
+    // =================================================
+    // KEEP FILTER DOMAINS IN SYNC WITH ATLAS
+    // =================================================
+
+    useEffect(() => {
+
+        setFilters(
+            current => ({
+
+                ...current,
+
+                domains:
+                    availableDomains
+
+            })
+        );
+
+    }, [
+        atlasName,
+        availableDomains
+    ]);
+
+
+    // =================================================
+    // RESET ATLAS-SPECIFIC STATE
     // =================================================
 
     useEffect(() => {
@@ -98,7 +177,57 @@ export default function AtlasLayout({
 
         setSearchQuery("");
 
-    }, [atlasName]);
+    }, [
+        atlasName
+    ]);
+
+
+    // =================================================
+    // FILTERED NODES
+    // =================================================
+
+    const filteredNodes =
+        useMemo(
+
+            () =>
+                filterNodes(
+
+                    data.atlas,
+
+                    filters
+
+                ),
+
+            [
+                data.atlas,
+                filters
+            ]
+
+        );
+
+
+    // =================================================
+    // FILTERED ATLAS DATA
+    // =================================================
+
+    const filteredData =
+        useMemo(
+
+            () => ({
+
+                ...data,
+
+                atlas:
+                    filteredNodes
+
+            }),
+
+            [
+                data,
+                filteredNodes
+            ]
+
+        );
 
 
     // =================================================
@@ -115,21 +244,75 @@ export default function AtlasLayout({
 
         :
 
-        data.atlas
+        filteredNodes
 
-            .filter(node =>
+            .filter(
+                node =>
 
-                node.title
-
-                    .toLowerCase()
-
-                    .includes(
-                        searchQuery.toLowerCase()
-                    )
+                    node.title
+                        .toLowerCase()
+                        .includes(
+                            searchQuery
+                                .toLowerCase()
+                        )
 
             )
 
-            .slice(0, 10);
+            .slice(
+                0,
+                10
+            );
+
+
+    // =================================================
+    // SELECT NODE
+    // =================================================
+
+    function handleSelectNode(
+        node: AtlasNode | null
+    ) {
+
+        setSelectedNode(
+            node
+        );
+
+    }
+
+
+    // =================================================
+    // UPDATE FILTERS
+    // =================================================
+
+    function handleFiltersChange(
+
+        nextFilters: AtlasFilters
+
+    ) {
+
+        setFilters(
+            nextFilters
+        );
+
+
+        // If the currently selected item
+        // is no longer visible, clear it.
+
+        if (
+            selectedNode
+            &&
+            !filterNodes(
+                [selectedNode],
+                nextFilters
+            ).length
+        ) {
+
+            setSelectedNode(
+                null
+            );
+
+        }
+
+    }
 
 
     // =================================================
@@ -165,21 +348,49 @@ export default function AtlasLayout({
 
             <Sidebar
 
-                atlasName={atlasName}
+                atlasName={
+                    atlasName
+                }
 
-                onAtlasChange={onAtlasChange}
+                onAtlasChange={
+                    onAtlasChange
+                }
 
-                searchQuery={searchQuery}
+                searchQuery={
+                    searchQuery
+                }
 
-                onSearchChange={setSearchQuery}
+                onSearchChange={
+                    setSearchQuery
+                }
 
-                searchResults={searchResults}
+                searchResults={
+                    searchResults
+                }
 
-                onSelectResult={setSelectedNode}
+                onSelectResult={
+                    handleSelectNode
+                }
 
-                colorMode={colorMode}
+                colorMode={
+                    colorMode
+                }
 
-                onColorModeChange={setColorMode}
+                onColorModeChange={
+                    setColorMode
+                }
+
+                filters={
+                    filters
+                }
+
+                availableDomains={
+                    availableDomains
+                }
+
+                onFiltersChange={
+                    handleFiltersChange
+                }
 
             />
 
@@ -202,11 +413,17 @@ export default function AtlasLayout({
 
                 <UniverseCanvas
 
-                    data={data}
+                    data={
+                        filteredData
+                    }
 
-                    colorMode={colorMode}
+                    colorMode={
+                        colorMode
+                    }
 
-                    onSelect={setSelectedNode}
+                    onSelect={
+                        handleSelectNode
+                    }
 
                 />
 
@@ -219,7 +436,9 @@ export default function AtlasLayout({
 
             <DetailsPanel
 
-                node={selectedNode}
+                node={
+                    selectedNode
+                }
 
             />
 
