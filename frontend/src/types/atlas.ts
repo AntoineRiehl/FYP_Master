@@ -162,7 +162,6 @@ export type RegionNode = {
 
     y: number;
 
-
     size: number;
 
     item_count: number;
@@ -236,6 +235,47 @@ export type AtlasMetadata = {
     feature_config: FeatureConfig;
 
     metadata: Record<string, unknown>;
+
+};
+
+
+// =====================================================
+// Visualisation
+// =====================================================
+
+/**
+ * Determines which semantic/property dimension is used
+ * to colour atlas nodes.
+ *
+ * Domain:
+ *     Original source domain of the item.
+ *
+ * Cluster:
+ *     Semantic cluster determined by the atlas pipeline.
+ *
+ * Category:
+ *     Domain-specific category assigned to the item.
+ */
+export type ColorMode =
+    | "domain"
+    | "cluster"
+    | "category";
+
+
+// =====================================================
+// Atlas filters
+// =====================================================
+
+/**
+ * Filters applied to the currently loaded atlas.
+ *
+ * Empty arrays mean "show everything".
+ */
+export type AtlasFilters = {
+
+    domains: string[];
+
+    categories: string[];
 
 };
 

@@ -1,6 +1,5 @@
 # src/atlas/converters/dataframe_to_items.py
 
-
 from typing import List
 
 import pandas as pd
@@ -15,6 +14,9 @@ from src.atlas.schema.atlas_item import (
 )
 
 
+# =========================================================
+# GENERIC VALUE GETTER
+# =========================================================
 
 def _get(
     row,
@@ -23,9 +25,11 @@ def _get(
 ):
 
     if column in row.index:
+
         value = row[column]
 
         if pd.isna(value):
+
             return default
 
         return value
@@ -33,21 +37,30 @@ def _get(
     return default
 
 
+# =========================================================
+# SOURCE ID
+# =========================================================
 
-def _get_source_id(row):
+def _get_source_id(
+    row
+):
 
     return str(
 
         _get(
             row,
-            "movieId",
+            "source_id",
             _get(
                 row,
-                "business_id",
+                "movieId",
                 _get(
                     row,
-                    "mbid",
-                    ""
+                    "business_id",
+                    _get(
+                        row,
+                        "mbid",
+                        ""
+                    )
                 )
             )
         )
@@ -55,8 +68,56 @@ def _get_source_id(row):
     )
 
 
+# =========================================================
+# ITEM DOMAIN
+# =========================================================
 
-def _get_title(row):
+def _get_item_domain(
+    row,
+    atlas_domain
+):
+    """
+    Determine the original domain of an individual item.
+
+    For cross-domain atlases, the dataframe contains a
+    'domain' column created by combine_domain_data().
+
+    For mono-domain atlases, the dataframe may not contain
+    an explicit domain column, so the atlas domain is used
+    as the fallback.
+
+    Important distinction:
+
+        atlas_domain
+            = identity of the complete atlas
+
+        item_domain
+            = original domain of this individual item
+    """
+
+    item_domain = _get(
+        row,
+        "domain"
+    )
+
+    if item_domain is not None:
+
+        return str(
+            item_domain
+        )
+
+    return str(
+        atlas_domain
+    )
+
+
+# =========================================================
+# TITLE
+# =========================================================
+
+def _get_title(
+    row
+):
 
     return (
 
@@ -86,61 +147,104 @@ def _get_title(row):
     )
 
 
+# =========================================================
+# SAFE FLOAT
+# =========================================================
 
-def _safe_float(value, default=0):
+def _safe_float(
+    value,
+    default=0
+):
 
     try:
-        return float(value)
+
+        return float(
+            value
+        )
 
     except (
         TypeError,
         ValueError
     ):
+
         return default
 
 
+# =========================================================
+# SAFE INTEGER
+# =========================================================
 
-def _safe_int(value, default=-1):
+def _safe_int(
+    value,
+    default=-1
+):
 
     try:
-        return int(value)
+
+        return int(
+            value
+        )
 
     except (
         TypeError,
         ValueError
     ):
+
         return default
 
 
+# =========================================================
+# CATEGORIES
+# =========================================================
 
-def _get_categories(row):
+def _get_categories(
+    row
+):
 
-    categories=[]
+    categories = []
 
 
-    if _get(row, "genres"):
+    if _get(
+        row,
+        "genres"
+    ):
 
         categories.append(
             str(
-                _get(row,"genres")
+                _get(
+                    row,
+                    "genres"
+                )
             )
         )
 
 
-    elif _get(row, "categories"):
+    elif _get(
+        row,
+        "categories"
+    ):
 
         categories.append(
             str(
-                _get(row,"categories")
+                _get(
+                    row,
+                    "categories"
+                )
             )
         )
 
 
-    elif _get(row, "macro_genre"):
+    elif _get(
+        row,
+        "macro_genre"
+    ):
 
         categories.append(
             str(
-                _get(row,"macro_genre")
+                _get(
+                    row,
+                    "macro_genre"
+                )
             )
         )
 
@@ -148,6 +252,9 @@ def _get_categories(row):
     return categories
 
 
+# =========================================================
+# STATISTICS
+# =========================================================
 
 def _get_statistics(
     row
@@ -215,86 +322,194 @@ def _get_statistics(
     )
 
 
+# =========================================================
+# DATAFRAME → ATLAS ITEMS
+# =========================================================
 
 def dataframe_to_items(
     df: pd.DataFrame,
     domain: str
 ) -> List[AtlasItem]:
+    """
+    Convert a dataframe into AtlasItem objects.
+
+    Parameters
+    ----------
+    df:
+        Atlas dataframe containing the processed items.
+
+    domain:
+        Domain/identity of the complete atlas.
+
+        Examples:
+
+            "movies"
+            "music"
+            "restaurants"
+            "movies_music"
+            "movies_music_restaurants"
+
+    Important
+    ---------
+    The supplied 'domain' identifies the ATLAS itself.
+
+    Individual item domains are taken from the dataframe's
+    'domain' column when available.
+
+    Therefore:
+
+        AtlasBundle.domain
+            -> "movies_music"
+
+        AtlasItem.domain
+            -> "movies" or "music"
+
+    This allows cross-domain atlases to preserve original
+    domain membership without using domain as a semantic
+    feature.
+    """
+
+    items = []
 
 
-    items=[]
+    # =====================================================
+    # VALIDATION
+    # =====================================================
 
+    if not isinstance(
+        df,
+        pd.DataFrame
+    ):
+
+        raise TypeError(
+            "df must be a pandas DataFrame."
+        )
+
+
+    if not isinstance(
+        domain,
+        str
+    ) or not domain.strip():
+
+        raise ValueError(
+            "domain must be a non-empty string."
+        )
+
+
+    # =====================================================
+    # CONVERT ROWS
+    # =====================================================
 
     for _, row in df.iterrows():
 
+
+        # -------------------------------------------------
+        # IDENTIFIERS
+        # -------------------------------------------------
 
         source_id = _get_source_id(
             row
         )
 
 
+        item_domain = _get_item_domain(
+            row,
+            domain
+        )
+
+
+        # -------------------------------------------------
+        # ITEM
+        # -------------------------------------------------
+
         item = AtlasItem(
 
+            # -------------------------------------------------
+            # GLOBAL ITEM ID
+            # -------------------------------------------------
+            #
+            # Cross-domain dataframes created by
+            # combine_domain_data() already contain a
+            # globally unique 'id' such as:
+            #
+            #     movies:123
+            #     music:abc
+            #     restaurants:xyz
+            #
+            # We preserve it when available.
+            #
+            id=str(
+                _get(
+                    row,
+                    "id",
+                    source_id
+                )
+            ),
 
-            id=source_id,
 
+            # -------------------------------------------------
+            # SOURCE ID
+            # -------------------------------------------------
 
             source_id=source_id,
 
+
+            # -------------------------------------------------
+            # TITLE
+            # -------------------------------------------------
 
             title=_get_title(
                 row
             ),
 
 
-            domain=domain,
+            # -------------------------------------------------
+            # ORIGINAL ITEM DOMAIN
+            # -------------------------------------------------
+
+            domain=item_domain,
 
 
+            # -------------------------------------------------
+            # METADATA
+            # -------------------------------------------------
 
             metadata=MediaMetadata(
-
 
                 year=_get(
                     row,
                     "year"
                 ),
 
-
                 country=_get(
                     row,
                     "country"
                 ),
-
 
                 artist=_get(
                     row,
                     "artist_lastfm"
                 ),
 
-
                 album=_get(
                     row,
                     "album"
                 ),
-
 
                 address=_get(
                     row,
                     "address"
                 ),
 
-
                 city=_get(
                     row,
                     "city"
                 ),
 
-
                 latitude=_get(
                     row,
                     "latitude"
                 ),
-
 
                 longitude=_get(
                     row,
@@ -304,19 +519,23 @@ def dataframe_to_items(
             ),
 
 
+            # -------------------------------------------------
+            # TEXT FEATURES
+            # -------------------------------------------------
 
             text=TextFeatures(
-
 
                 tags=(
 
                     [
+
                         str(
                             _get(
                                 row,
                                 "tags_text"
                             )
                         )
+
                     ]
 
                     if _get(
@@ -328,8 +547,6 @@ def dataframe_to_items(
 
                 ),
 
-
-
                 categories=_get_categories(
                     row
                 )
@@ -337,15 +554,20 @@ def dataframe_to_items(
             ),
 
 
+            # -------------------------------------------------
+            # STATISTICS
+            # -------------------------------------------------
 
             statistics=_get_statistics(
                 row
             ),
 
 
+            # -------------------------------------------------
+            # POSITION
+            # -------------------------------------------------
 
             position=AtlasPosition(
-
 
                 x=_safe_float(
                     _get(
@@ -354,7 +576,6 @@ def dataframe_to_items(
                         0
                     )
                 ),
-
 
                 y=_safe_float(
                     _get(
@@ -367,9 +588,11 @@ def dataframe_to_items(
             ),
 
 
+            # -------------------------------------------------
+            # VISUAL INFORMATION
+            # -------------------------------------------------
 
             visual=AtlasVisual(
-
 
                 size=_safe_float(
                     _get(
@@ -380,7 +603,6 @@ def dataframe_to_items(
                     1
                 ),
 
-
                 cluster=_safe_int(
                     _get(
                         row,
@@ -388,7 +610,6 @@ def dataframe_to_items(
                         -1
                     )
                 ),
-
 
                 cluster_label=_get(
                     row,

@@ -1,4 +1,4 @@
-#src/atlas/cross_domain/combine_data.py
+# src/atlas/cross_domain/combine_data.py
 
 import pandas as pd
 
@@ -16,9 +16,11 @@ def _get_source_id(
 
     Supported domains:
 
-    Movies       -> movieId
-    Music        -> mbid
-    Restaurants  -> business_id
+        Movies       -> movieId
+        Music        -> mbid
+        Restaurants  -> business_id
+
+    The original identifier is preserved as a string.
     """
 
     if "movieId" in df.columns:
@@ -68,11 +70,22 @@ def _prepare_domain_dataframe(
     """
     Prepare one domain dataframe for combination.
 
-    Adds:
+    Adds the following standardised columns:
 
         source_id
         domain
         id
+
+    Important:
+        'domain' represents the ORIGINAL domain of the item.
+
+        For example:
+
+            movie     -> movies
+            artist    -> music
+            restaurant -> restaurants
+
+        It does NOT represent the cross-domain atlas.
 
     The original domain-specific columns are preserved.
     """
@@ -101,6 +114,20 @@ def _prepare_domain_dataframe(
 
 
     # -----------------------------------------------------
+    # VALIDATE DOMAIN
+    # -----------------------------------------------------
+
+    domain = domain.strip().lower()
+
+
+    if not domain:
+
+        raise ValueError(
+            "Domain name cannot be empty."
+        )
+
+
+    # -----------------------------------------------------
     # SOURCE ID
     # -----------------------------------------------------
 
@@ -110,8 +137,24 @@ def _prepare_domain_dataframe(
 
 
     # -----------------------------------------------------
-    # DOMAIN
+    # ORIGINAL DOMAIN
     # -----------------------------------------------------
+
+    # IMPORTANT:
+    #
+    # This is the item's actual domain.
+    #
+    # It must remain:
+    #
+    #     movies
+    #     music
+    #     restaurants
+    #
+    # even when the dataframe is later used to
+    # construct a cross-domain atlas.
+    #
+    # The cross-domain nature of the atlas is represented
+    # by the pipeline / bundle configuration, NOT here.
 
     df["domain"] = domain
 
@@ -120,14 +163,14 @@ def _prepare_domain_dataframe(
     # GLOBAL ATLAS ID
     # -----------------------------------------------------
 
-    # Prefixing the source ID with the domain prevents
-    # collisions between different domains.
+    # Prefixing the source ID with the ORIGINAL domain
+    # prevents collisions between domains.
     #
-    # Example:
+    # Examples:
     #
-    # movies:123
-    # music:123
-    # restaurants:123
+    #     movies:123
+    #     music:123
+    #     restaurants:123
 
     df["id"] = (
         df["domain"]
@@ -153,7 +196,7 @@ def combine_domain_data(
     Parameters
     ----------
     domain_data:
-        Dictionary mapping domain names to their
+        Dictionary mapping ORIGINAL domain names to
         preprocessed dataframes.
 
         Example:
@@ -175,6 +218,24 @@ def combine_domain_data(
             domain
 
         columns.
+
+    Important
+    ---------
+    The 'domain' column ALWAYS represents the original
+    domain of each item.
+
+    Therefore, for a Movies + Music atlas:
+
+        movie  -> domain = "movies"
+        artist -> domain = "music"
+
+    and NOT:
+
+        movie  -> domain = "movies_music"
+        artist -> domain = "movies_music"
+
+    This allows the frontend and later analysis to inspect
+    domain membership independently from the semantic atlas.
 
     Notes
     -----
@@ -282,6 +343,26 @@ def combine_domain_data(
 
         raise ValueError(
             "One or more rows have a missing domain."
+        )
+
+
+    # =====================================================
+    # VALIDATE EXPECTED DOMAIN VALUES
+    # =====================================================
+
+    invalid_domains = (
+        combined["domain"]
+        .astype(str)
+        .str.strip()
+        .eq("")
+    )
+
+
+    if invalid_domains.any():
+
+        raise ValueError(
+            "One or more rows contain an empty "
+            "domain value."
         )
 
 

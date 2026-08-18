@@ -31,80 +31,112 @@ import {
 } from "./renderer/hover";
 
 
+import type {
+    ColorMode
+} from "../../config/colorMode";
+
+
 
 export function renderUniverse(
 
-    ctx:CanvasRenderingContext2D,
+    ctx: CanvasRenderingContext2D,
 
-    canvas:HTMLCanvasElement,
+    canvas: HTMLCanvasElement,
 
-    camera:Camera,
+    camera: Camera,
 
-    data:AtlasData,
+    data: AtlasData,
 
-    mouse:{
-        x:number;
-        y:number;
-    }
+    mouse: {
+        x: number;
+        y: number;
+    },
 
-):AtlasNode|null{
+    colorMode: ColorMode
+
+): AtlasNode | null {
 
 
     ctx.clearRect(
+
         0,
+
         0,
+
         canvas.width,
+
         canvas.height
+
     );
 
 
 
     const mode =
+
         getLOD(
             camera.zoom
         );
 
 
 
-    if(mode===0){
+    if (mode === 0) {
 
 
         drawRegions(
+
             ctx,
+
             canvas,
+
             camera,
+
             data.regions
+
         );
 
 
     }
-    else{
+
+    else {
 
 
         drawNodes(
-            ctx,
-            canvas,
-            camera,
-            data.atlas,
-            mode
-        );
 
+            ctx,
+
+            canvas,
+
+            camera,
+
+            data.atlas,
+
+            mode,
+
+            colorMode
+
+        );
 
     }
 
 
 
     const hovered =
+
         detectHover(
+
             canvas,
+
             camera,
+
             data.atlas,
+
             mouse
+
         );
 
 
 
-    if(hovered){
+    if (hovered) {
 
 
         ctx.fillStyle =
@@ -112,10 +144,15 @@ export function renderUniverse(
 
 
         ctx.fillRect(
-            mouse.x+10,
-            mouse.y+10,
+
+            mouse.x + 10,
+
+            mouse.y + 10,
+
             230,
+
             28
+
         );
 
 
@@ -131,9 +168,9 @@ export function renderUniverse(
 
             hovered.title,
 
-            mouse.x+15,
+            mouse.x + 15,
 
-            mouse.y+28
+            mouse.y + 28
 
         );
 

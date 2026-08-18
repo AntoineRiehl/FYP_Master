@@ -1,86 +1,118 @@
 // frontend/src/components/UniverseCanvas.tsx
 
+// frontend/src/components/UniverseCanvas.tsx
+
 import {
     useEffect,
     useRef
 } from "react";
+
 
 import type {
     AtlasData,
     AtlasNode
 } from "../types/atlas";
 
+
+import type {
+    ColorMode
+} from "../config/colorMode";
+
+
 import {
     createCamera
 } from "./universe/camera";
+
 
 import {
     setupMouse
 } from "./universe/mouse";
 
+
 import {
     renderUniverse
 } from "./universe/renderer";
+
 
 import {
     detectSelection
 } from "./universe/renderer/select";
 
 
+// =====================================================
+// PROPS
+// =====================================================
 
 type Props = {
 
-    data:AtlasData;
+    data: AtlasData;
+
+    colorMode: ColorMode;
 
     onSelect:
-        (node:AtlasNode|null)=>void;
+        (node: AtlasNode | null) => void;
 
 };
 
 
+// =====================================================
+// COMPONENT
+// =====================================================
 
 export default function UniverseCanvas({
 
     data,
 
+    colorMode,
+
     onSelect
 
-}:Props){
+}: Props) {
 
 
     const canvasRef =
         useRef<HTMLCanvasElement>(null);
 
-    // IMPORTANT:
-    // Camera is created ONCE and survives re-renders.
+
+    // Camera persists between renders.
     const cameraRef =
         useRef(createCamera());
 
 
 
-    useEffect(()=>{
+    useEffect(() => {
+
 
         const canvas =
             canvasRef.current!;
 
+
         const ctx =
             canvas.getContext("2d")!;
+
 
         const camera =
             cameraRef.current;
 
 
 
-        function resize(){
+        // =================================================
+        // RESIZE
+        // =================================================
+
+        function resize() {
 
             const parent =
                 canvas.parentElement;
 
-            if(!parent)
+
+            if (!parent)
                 return;
+
 
             canvas.width =
                 parent.clientWidth;
+
 
             canvas.height =
                 parent.clientHeight;
@@ -91,6 +123,8 @@ export default function UniverseCanvas({
 
         resize();
 
+
+
         window.addEventListener(
             "resize",
             resize
@@ -98,19 +132,26 @@ export default function UniverseCanvas({
 
 
 
-        const{
+        // =================================================
+        // MOUSE
+        // =================================================
+
+        const {
             mouse,
             cleanup
-        }=
+        } =
+
             setupMouse(
 
                 canvas,
 
                 camera,
 
-                (x,y)=>{
+                (x, y) => {
+
 
                     const selected =
+
                         detectSelection(
 
                             canvas,
@@ -126,7 +167,10 @@ export default function UniverseCanvas({
 
                         );
 
-                    onSelect(selected);
+
+                    onSelect(
+                        selected
+                    );
 
                 }
 
@@ -134,11 +178,16 @@ export default function UniverseCanvas({
 
 
 
-        let animation:number;
+        // =================================================
+        // ANIMATION LOOP
+        // =================================================
+
+        let animation: number;
 
 
 
-        function frame(){
+        function frame() {
+
 
             renderUniverse(
 
@@ -150,11 +199,15 @@ export default function UniverseCanvas({
 
                 data,
 
-                mouse
+                mouse,
+
+                colorMode
 
             );
 
+
             animation =
+
                 requestAnimationFrame(
                     frame
                 );
@@ -167,13 +220,20 @@ export default function UniverseCanvas({
 
 
 
-        return()=>{
+        // =================================================
+        // CLEANUP
+        // =================================================
+
+        return () => {
+
 
             cancelAnimationFrame(
                 animation
             );
 
+
             cleanup();
+
 
             window.removeEventListener(
                 "resize",
@@ -182,14 +242,20 @@ export default function UniverseCanvas({
 
         };
 
-    },[
+
+    }, [
+
         data,
-        onSelect
+
+        onSelect,
+
+        colorMode
+
     ]);
 
 
 
-    return(
+    return (
 
         <canvas
 
@@ -197,15 +263,15 @@ export default function UniverseCanvas({
 
             style={{
 
-                width:"100%",
+                width: "100%",
 
-                height:"100%",
+                height: "100%",
 
-                display:"block",
+                display: "block",
 
-                background:"#050816",
+                background: "#050816",
 
-                cursor:"grab"
+                cursor: "grab"
 
             }}
 

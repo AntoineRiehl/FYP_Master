@@ -1,6 +1,9 @@
 // frontend/src/components/AtlasLayout.tsx
 
+// frontend/src/components/AtlasLayout.tsx
+
 import {
+    useEffect,
     useState
 } from "react";
 
@@ -16,19 +19,30 @@ import type {
 } from "../types/atlas";
 
 
+import type {
+    ColorMode
+} from "../config/colorMode";
+
+
+// =====================================================
+// PROPS
+// =====================================================
 
 type Props = {
 
     data: AtlasData;
 
-    atlasName:string;
+    atlasName: string;
 
     onAtlasChange:
-        (name:string)=>void;
+        (name: string) => void;
 
 };
 
 
+// =====================================================
+// COMPONENT
+// =====================================================
 
 export default function AtlasLayout({
 
@@ -38,16 +52,23 @@ export default function AtlasLayout({
 
     onAtlasChange
 
-}:Props){
+}: Props) {
 
+
+    // =================================================
+    // SELECTED NODE
+    // =================================================
 
     const [
         selectedNode,
         setSelectedNode
     ] =
-    useState<AtlasNode|null>(null);
+    useState<AtlasNode | null>(null);
 
 
+    // =================================================
+    // SEARCH
+    // =================================================
 
     const [
         searchQuery,
@@ -56,6 +77,33 @@ export default function AtlasLayout({
     useState("");
 
 
+    // =================================================
+    // COLOUR MODE
+    // =================================================
+
+    const [
+        colorMode,
+        setColorMode
+    ] =
+    useState<ColorMode>("cluster");
+
+
+    // =================================================
+    // RESET SELECTION WHEN ATLAS CHANGES
+    // =================================================
+
+    useEffect(() => {
+
+        setSelectedNode(null);
+
+        setSearchQuery("");
+
+    }, [atlasName]);
+
+
+    // =================================================
+    // SEARCH RESULTS
+    // =================================================
 
     const searchResults =
 
@@ -81,9 +129,12 @@ export default function AtlasLayout({
 
             )
 
-            .slice(0,10);
+            .slice(0, 10);
 
 
+    // =================================================
+    // RENDER
+    // =================================================
 
     return (
 
@@ -91,22 +142,26 @@ export default function AtlasLayout({
 
             style={{
 
-                display:"flex",
+                display: "flex",
 
-                width:"100vw",
+                width: "100vw",
 
-                height:"100vh",
+                height: "100vh",
 
-                overflow:"hidden",
+                overflow: "hidden",
 
-                background:"#050816",
+                background: "#050816",
 
-                color:"white"
+                color: "white"
 
             }}
 
         >
 
+
+            {/* =================================================
+                LEFT SIDEBAR
+            ================================================= */}
 
             <Sidebar
 
@@ -122,35 +177,45 @@ export default function AtlasLayout({
 
                 onSelectResult={setSelectedNode}
 
+                colorMode={colorMode}
+
+                onColorModeChange={setColorMode}
+
             />
 
 
+            {/* =================================================
+                MAIN CANVAS
+            ================================================= */}
 
             <div
 
                 style={{
 
-                    flex:1,
+                    flex: 1,
 
-                    position:"relative"
+                    position: "relative"
 
                 }}
 
             >
 
-
                 <UniverseCanvas
 
                     data={data}
+
+                    colorMode={colorMode}
 
                     onSelect={setSelectedNode}
 
                 />
 
-
             </div>
 
 
+            {/* =================================================
+                DETAILS PANEL
+            ================================================= */}
 
             <DetailsPanel
 

@@ -1,5 +1,7 @@
 //frontend/src/components/universe/renderer/drawNodes.ts
 
+// frontend/src/components/universe/renderer/drawNodes.ts
+
 import type {
     AtlasNode
 } from "../../../types/atlas";
@@ -16,8 +18,13 @@ import {
 
 
 import {
-    clusterColor
+    getNodeColor
 } from "../colors";
+
+
+import type {
+    ColorMode
+} from "../../../config/colorMode";
 
 
 import {
@@ -27,20 +34,30 @@ import {
 
 
 
+// =====================================================
+// DRAW NODES
+// =====================================================
+
 export function drawNodes(
 
-    ctx:CanvasRenderingContext2D,
+    ctx: CanvasRenderingContext2D,
 
-    canvas:HTMLCanvasElement,
+    canvas: HTMLCanvasElement,
 
-    camera:Camera,
+    camera: Camera,
 
-    data:AtlasNode[],
+    data: AtlasNode[],
 
-    mode:number
+    mode: number,
 
-){
+    colorMode: ColorMode
 
+) {
+
+
+    // =================================================
+    // VISIBLE NODES
+    // =================================================
 
     const visible =
 
@@ -64,28 +81,41 @@ export function drawNodes(
 
 
 
+    // =================================================
+    // PERFORMANCE CAP
+    // =================================================
+
     const capped =
 
-        mode===1
+        mode === 1
 
         ?
 
         sampleArray(
+
             visible,
+
             2500
+
         )
 
         :
 
         sampleArray(
+
             visible,
+
             6000
+
         );
 
 
 
-    for(const node of capped){
+    // =================================================
+    // DRAW
+    // =================================================
 
+    for (const node of capped) {
 
 
         const pos =
@@ -104,9 +134,13 @@ export function drawNodes(
 
 
 
+        // ---------------------------------------------
+        // NODE SIZE
+        // ---------------------------------------------
+
         const radius =
 
-            mode===1
+            mode === 1
 
             ?
 
@@ -114,9 +148,7 @@ export function drawNodes(
                 node.visual.size
             ) * 1.5
 
-
             :
-
 
             Math.max(
 
@@ -129,6 +161,10 @@ export function drawNodes(
             );
 
 
+
+        // ---------------------------------------------
+        // CIRCLE
+        // ---------------------------------------------
 
         ctx.beginPath();
 
@@ -143,35 +179,44 @@ export function drawNodes(
 
             0,
 
-            Math.PI*2
+            Math.PI * 2
 
         );
 
 
 
+        // ---------------------------------------------
+        // DYNAMIC COLOR
+        // ---------------------------------------------
+
         ctx.fillStyle =
 
-            clusterColor(
+            getNodeColor(
 
-                node.visual.cluster ?? -1
+                node,
+
+                colorMode
 
             );
-
 
 
         ctx.fill();
 
 
 
-        if(
+        // ---------------------------------------------
+        // LABELS
+        // ---------------------------------------------
 
-            mode===2
+        if (
+
+            mode === 2
 
             &&
 
-            radius>4
+            radius > 4
 
-        ){
+        ) {
 
 
             ctx.fillStyle =
@@ -186,7 +231,7 @@ export function drawNodes(
 
                 node.title,
 
-                pos.x+5,
+                pos.x + 5,
 
                 pos.y
 
