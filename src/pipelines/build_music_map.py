@@ -14,6 +14,10 @@ from src.domains.music.feature_engineering import (
     create_macro_genres
 )
 
+from src.atlas.visual.size_normalization import (
+    normalize_visual_sizes
+)
+
 from src.atlas.embeddings.tfidf_pipeline import (
     get_tfidf_embeddings
 )
@@ -151,7 +155,7 @@ music = compute_popularity_score(
 )
 
 
-music = create_visual_sizes(
+music = normalize_visual_sizes(
     music,
     strength=VISUAL_SIZE_STRENGTH
 )

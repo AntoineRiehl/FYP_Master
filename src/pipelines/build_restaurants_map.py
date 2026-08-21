@@ -14,6 +14,10 @@ from src.domains.restaurants.feature_engineering import (
     create_macro_genres
 )
 
+from src.atlas.visual.size_normalization import (
+    normalize_visual_sizes
+)
+
 from src.atlas.embeddings.tfidf_pipeline import (
     get_tfidf_embeddings
 )
@@ -167,7 +171,7 @@ restaurants = compute_popularity_score(
 )
 
 
-restaurants = create_visual_sizes(
+restaurants = normalize_visual_sizes(
 
     restaurants,
 

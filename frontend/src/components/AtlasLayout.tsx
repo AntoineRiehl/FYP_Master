@@ -26,7 +26,7 @@ import type {
 
 import type {
     ColorMode
-} from "../config/colorMode";
+} from "../types/atlas";
 
 
 import type {
@@ -95,6 +95,28 @@ export default function AtlasLayout({
     const [
         selectedNode,
         setSelectedNode
+    ] =
+    useState<AtlasNode | null>(
+        null
+    );
+
+
+    // =================================================
+    // NODE TO FOCUS
+    // =================================================
+
+    /*
+     * This is separate from selectedNode.
+     *
+     * Selecting a node does not necessarily mean
+     * that the camera should move.
+     *
+     * Search result clicks will set both.
+     */
+
+    const [
+        focusNode,
+        setFocusNode
     ] =
     useState<AtlasNode | null>(
         null
@@ -174,6 +196,8 @@ export default function AtlasLayout({
     useEffect(() => {
 
         setSelectedNode(null);
+
+        setFocusNode(null);
 
         setSearchQuery("");
 
@@ -280,6 +304,47 @@ export default function AtlasLayout({
 
 
     // =================================================
+    // SELECT SEARCH RESULT
+    // =================================================
+
+    function handleSelectSearchResult(
+        node: AtlasNode
+    ) {
+
+        /*
+         * Select the item so that the DetailsPanel
+         * opens/updates.
+         */
+
+        setSelectedNode(
+            node
+        );
+
+
+        /*
+         * Tell UniverseCanvas that the camera
+         * should move to this node.
+         */
+
+        setFocusNode(
+            node
+        );
+
+
+        /*
+         * Clear the search query after selecting
+         * an item.
+         *
+         * This keeps the sidebar cleaner and also
+         * allows the same item to be selected again.
+         */
+
+        setSearchQuery("");
+
+    }
+
+
+    // =================================================
     // UPDATE FILTERS
     // =================================================
 
@@ -307,6 +372,27 @@ export default function AtlasLayout({
         ) {
 
             setSelectedNode(
+                null
+            );
+
+        }
+
+
+        /*
+         * If the currently focused item becomes
+         * invisible, clear the focus request too.
+         */
+
+        if (
+            focusNode
+            &&
+            !filterNodes(
+                [focusNode],
+                nextFilters
+            ).length
+        ) {
+
+            setFocusNode(
                 null
             );
 
@@ -369,7 +455,7 @@ export default function AtlasLayout({
                 }
 
                 onSelectResult={
-                    handleSelectNode
+                    handleSelectSearchResult
                 }
 
                 colorMode={
@@ -423,6 +509,10 @@ export default function AtlasLayout({
 
                     onSelect={
                         handleSelectNode
+                    }
+
+                    focusNode={
+                        focusNode
                     }
 
                 />

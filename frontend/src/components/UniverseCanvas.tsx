@@ -1,6 +1,5 @@
 // frontend/src/components/UniverseCanvas.tsx
 
-// frontend/src/components/UniverseCanvas.tsx
 
 import {
     useEffect,
@@ -20,7 +19,8 @@ import type {
 
 
 import {
-    createCamera
+    createCamera,
+    flyTo
 } from "./universe/camera";
 
 
@@ -52,6 +52,9 @@ type Props = {
     onSelect:
         (node: AtlasNode | null) => void;
 
+    focusNode:
+        AtlasNode | null;
+
 };
 
 
@@ -65,20 +68,36 @@ export default function UniverseCanvas({
 
     colorMode,
 
-    onSelect
+    onSelect,
+
+    focusNode
 
 }: Props) {
 
+
+    // =================================================
+    // CANVAS
+    // =================================================
 
     const canvasRef =
         useRef<HTMLCanvasElement>(null);
 
 
-    // Camera persists between renders.
+    // =================================================
+    // CAMERA
+    // =================================================
+
+    /*
+     * Camera persists between React renders.
+     */
+
     const cameraRef =
         useRef(createCamera());
 
 
+    // =================================================
+    // MAIN CANVAS SETUP
+    // =================================================
 
     useEffect(() => {
 
@@ -254,6 +273,57 @@ export default function UniverseCanvas({
     ]);
 
 
+    // =================================================
+    // FOCUS NODE
+    // =================================================
+
+    useEffect(() => {
+
+
+        if (!focusNode)
+            return;
+
+
+        const canvas =
+            canvasRef.current;
+
+
+        if (!canvas)
+            return;
+
+
+        const camera =
+            cameraRef.current;
+
+
+        /*
+         * Move directly to the node's world position
+         * and zoom in.
+         *
+         * No animation/fancy flight for now.
+         */
+
+        flyTo(
+
+            camera,
+
+            focusNode.position.x,
+
+            focusNode.position.y,
+
+            2000
+
+        );
+
+
+    }, [
+        focusNode
+    ]);
+
+
+    // =================================================
+    // RENDER
+    // =================================================
 
     return (
 

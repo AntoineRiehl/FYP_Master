@@ -12,8 +12,11 @@ from src.domains.movies.merge_data import (
 from src.domains.movies.feature_engineering import (
     compute_weighted_rating,
     concatenate_tags,
-    create_macro_genres,
-    create_visual_sizes
+    create_macro_genres
+)
+
+from src.atlas.visual.size_normalization import (
+    normalize_visual_sizes
 )
 
 from src.atlas.embeddings.tfidf_pipeline import (
@@ -128,6 +131,9 @@ merged = compute_weighted_rating(
     merged
 )
 
+merged["popularity_score"] = (
+    merged["rating_count"]
+)
 
 # =========================================================
 # TAG PROCESSING
@@ -195,14 +201,13 @@ final = create_macro_genres(
     final
 )
 
-final = create_visual_sizes(
+final = normalize_visual_sizes(
 
     final,
 
     strength=VISUAL_SIZE_STRENGTH
 
 )
-
 
 # =========================================================
 # CLUSTERING

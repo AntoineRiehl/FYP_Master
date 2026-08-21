@@ -259,7 +259,8 @@ export type AtlasMetadata = {
 export type ColorMode =
     | "domain"
     | "cluster"
-    | "category";
+    | "category"
+    | "feel";
 
 
 // =====================================================
