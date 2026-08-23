@@ -143,7 +143,7 @@ export type AtlasNode = {
     visual: AtlasVisual;
 
 
-    enrichment?: Record<string, unknown>;
+    enrichment?: AtlasEnrichment;
 
 };
 
@@ -235,6 +235,20 @@ export type AtlasMetadata = {
     feature_config: FeatureConfig;
 
     metadata: Record<string, unknown>;
+
+};
+
+// =====================================================
+// Enrichment
+// =====================================================
+
+export type AtlasEnrichment = {
+
+    review_count?: number;
+
+    reviews_used_for_embedding?: number;
+
+    has_review_embedding?: boolean;
 
 };
 

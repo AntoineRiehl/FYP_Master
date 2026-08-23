@@ -1,4 +1,6 @@
-#src/pipelines/build_movie_map.py
+# src/pipelines/build_movie_map.py
+
+import pandas as pd
 
 from pathlib import Path
 
@@ -21,6 +23,10 @@ from src.atlas.visual.size_normalization import (
 
 from src.atlas.embeddings.tfidf_pipeline import (
     get_tfidf_embeddings
+)
+
+from src.atlas.embeddings.semantic_fusion import (
+    fuse_semantic_embeddings
 )
 
 from src.atlas.embeddings.dimensionality_reduction import (
@@ -54,6 +60,11 @@ from src.atlas.export.export_bundle import (
 
 ROOT = Path(__file__).resolve().parents[2]
 
+
+# ---------------------------------------------------------
+# Analysis dataframe
+# ---------------------------------------------------------
+
 OUTPUT_PATH = (
     ROOT
     / "data"
@@ -65,6 +76,32 @@ OUTPUT_PATH.parent.mkdir(
     parents=True,
     exist_ok=True
 )
+
+
+# ---------------------------------------------------------
+# Sentence-BERT review embeddings
+# ---------------------------------------------------------
+
+MOVIE_REVIEW_EMBEDDINGS = (
+    ROOT
+    / "data"
+    / "processed"
+    / "embeddings"
+    / "movies"
+    / "movie_review_embeddings.npz"
+)
+
+MOVIE_REVIEW_SUMMARY = (
+    ROOT
+    / "data"
+    / "processed"
+    / "reviews"
+    / "movie_review_summary.csv"
+)
+
+# ---------------------------------------------------------
+# Frontend bundle
+# ---------------------------------------------------------
 
 JSON_DIR = (
     ROOT
@@ -81,13 +118,13 @@ JSON_DIR = (
 
 FEATURE_CONFIG = FeatureConfig(
 
-    name="movies_tags",
+    name="movies_tags_reviews",
 
     use_tags=True,
 
     use_categories=True,
 
-    use_reviews=False,
+    use_reviews=True,
 
     use_metadata=True,
 
@@ -97,17 +134,79 @@ FEATURE_CONFIG = FeatureConfig(
 
 
 # =========================================================
-# VISUAL CONFIG
+# SEMANTIC CONFIGURATION
+# =========================================================
+
+# ---------------------------------------------------------
+# TF-IDF representation
+#
+# Raw TF-IDF:
+#     up to 5,000 dimensions
+#
+# Before fusion it is reduced using TruncatedSVD.
+# ---------------------------------------------------------
+
+TFIDF_COMPONENTS = 256
+
+
+# ---------------------------------------------------------
+# Review contribution
+#
+# Selected using:
+#
+#   src/domains/movies/evaluate_fusion_weights.py
+#
+# Evaluation result:
+#
+#   REVIEW_SHARE = 0.50
+#   TFIDF_SHARE  = 0.50
+#
+# This produced the highest balanced neighbourhood
+# coherence among the tested configurations.
+# ---------------------------------------------------------
+
+REVIEW_SHARE = 0.50
+
+
+# ---------------------------------------------------------
+# Reproducibility
+# ---------------------------------------------------------
+
+RANDOM_STATE = 42
+
+
+# =========================================================
+# VISUAL CONFIGURATION
 # =========================================================
 
 VISUAL_SIZE_STRENGTH = 1.8
 
 
 # =========================================================
+# VALIDATE REVIEW EMBEDDINGS
+# =========================================================
+
+if not MOVIE_REVIEW_EMBEDDINGS.exists():
+
+    raise FileNotFoundError(
+
+        "Movie review embeddings were not found:\n"
+        f"{MOVIE_REVIEW_EMBEDDINGS}\n\n"
+
+        "Run:\n"
+        "python -m src.domains.movies.embed_movie_reviews\n"
+        "before building the enriched movie atlas."
+
+    )
+
+
+# =========================================================
 # LOAD DATA
 # =========================================================
 
-print("\n[1/8] Loading raw data...")
+print(
+    "\n[1/9] Loading raw data..."
+)
 
 movies, ratings, tags = load_raw_data()
 
@@ -116,7 +215,9 @@ movies, ratings, tags = load_raw_data()
 # PREPROCESSING
 # =========================================================
 
-print("\n[2/8] Computing movie statistics...")
+print(
+    "\n[2/9] Computing movie statistics..."
+)
 
 movie_stats = compute_movie_stats(
     ratings
@@ -135,13 +236,18 @@ merged["popularity_score"] = (
     merged["rating_count"]
 )
 
+
 # =========================================================
 # TAG PROCESSING
 # =========================================================
 
-print("\n[3/8] Processing tags...")
+print(
+    "\n[3/9] Processing tags..."
+)
 
-movie_tags = concatenate_tags(tags)
+movie_tags = concatenate_tags(
+    tags
+)
 
 final = merged.merge(
 
@@ -154,23 +260,166 @@ final = merged.merge(
 )
 
 final["tags_text"] = (
+
     final["tags_text"]
     .fillna("")
+
 )
 
+# =========================================================
+# REVIEW METADATA
+# =========================================================
+
+print(
+    "\nLoading movie review metadata..."
+)
+
+review_summary = pd.read_csv(
+
+    MOVIE_REVIEW_SUMMARY,
+
+    usecols=[
+        "movieId",
+        "review_count"
+    ]
+
+)
+
+final = final.merge(
+
+    review_summary,
+
+    on="movieId",
+
+    how="left"
+
+)
+
+final["review_count"] = (
+
+    final["review_count"]
+    .fillna(0)
+    .astype(int)
+
+)
 
 # =========================================================
 # TF-IDF
 # =========================================================
 
-print("\n[4/8] Building TF-IDF embeddings...")
+print(
+    "\n[4/9] Building TF-IDF embeddings..."
+)
 
 tfidf_matrix, vectorizer = (
     get_tfidf_embeddings(
+
         final,
+
         text_column="tags_text",
+
         model_name="movies_tags"
+
     )
+)
+
+
+# =========================================================
+# SEMANTIC FUSION
+# =========================================================
+
+print(
+    "\n[5/9] Fusing TF-IDF and review semantics..."
+)
+
+(
+    semantic_matrix,
+    fusion_info,
+    review_counts
+
+) = fuse_semantic_embeddings(
+
+    tfidf_matrix=
+        tfidf_matrix,
+
+    entity_ids=
+        final["movieId"].to_numpy(),
+
+    review_embeddings_path=
+        MOVIE_REVIEW_EMBEDDINGS,
+
+    review_share=
+        REVIEW_SHARE,
+
+    tfidf_components=
+        TFIDF_COMPONENTS,
+
+    random_state=
+        RANDOM_STATE,
+
+    return_info=True
+
+)
+
+
+# ---------------------------------------------------------
+# Store review availability in the analysis dataframe.
+#
+# review_counts refers to the number of reviews ACTUALLY
+# used to construct the Sentence-BERT movie embedding.
+#
+# Because embeddings were capped at 50 reviews per movie,
+# this is intentionally called reviews_used_for_embedding
+# rather than total_review_count.
+# ---------------------------------------------------------
+
+final["reviews_used_for_embedding"] = (
+    review_counts
+)
+
+final["has_review_embedding"] = (
+    review_counts > 0
+)
+
+
+# ---------------------------------------------------------
+# Information
+# ---------------------------------------------------------
+
+print()
+
+print(
+    "Semantic fusion summary:"
+)
+
+print(
+    f"  TF-IDF reduced dimensions: "
+    f"{fusion_info['tfidf_components']}"
+)
+
+print(
+    f"  Review dimensions:         "
+    f"{fusion_info['review_components']}"
+)
+
+print(
+    f"  Final fused dimensions:    "
+    f"{fusion_info['fused_dimensions']}"
+)
+
+print(
+    f"  Movies with reviews:       "
+    f"{fusion_info['entities_with_reviews']:,}"
+)
+
+print(
+    f"  Review share:              "
+    f"{REVIEW_SHARE:.2f}"
+)
+
+print(
+    f"  TF-IDF share:              "
+    f"{1.0 - REVIEW_SHARE:.2f}"
 )
 
 
@@ -178,24 +427,33 @@ tfidf_matrix, vectorizer = (
 # UMAP
 # =========================================================
 
-print("\n[5/8] Computing UMAP projection...")
+print(
+    "\n[6/9] Computing UMAP projection "
+    "from fused semantic representation..."
+)
 
 embedding, umap_model = (
     get_umap_projection(
-        tfidf_matrix
+        semantic_matrix
     )
 )
 
-final["umap_x"] = embedding[:, 0]
+final["umap_x"] = (
+    embedding[:, 0]
+)
 
-final["umap_y"] = embedding[:, 1]
+final["umap_y"] = (
+    embedding[:, 1]
+)
 
 
 # =========================================================
 # FEATURE ENGINEERING
 # =========================================================
 
-print("\n[6/8] Creating atlas features...")
+print(
+    "\n[7/9] Creating atlas features..."
+)
 
 final = create_macro_genres(
     final
@@ -205,15 +463,19 @@ final = normalize_visual_sizes(
 
     final,
 
-    strength=VISUAL_SIZE_STRENGTH
+    strength=
+        VISUAL_SIZE_STRENGTH
 
 )
+
 
 # =========================================================
 # CLUSTERING
 # =========================================================
 
-print("\n[7/8] Computing clusters...")
+print(
+    "\n[8/9] Computing clusters..."
+)
 
 final = compute_clusters(
     final
@@ -228,7 +490,9 @@ final = create_region_labels(
 # EXPORT ANALYSIS DATASET
 # =========================================================
 
-print("\nSaving analysis dataframe...")
+print(
+    "\nSaving analysis dataframe..."
+)
 
 final.to_csv(
 
@@ -243,7 +507,9 @@ final.to_csv(
 # BUILD ATLAS BUNDLE
 # =========================================================
 
-print("\n[8/8] Building AtlasBundle...")
+print(
+    "\n[9/9] Building AtlasBundle..."
+)
 
 bundle = build_bundle(
 
@@ -251,21 +517,112 @@ bundle = build_bundle(
 
     domain="movies",
 
-    feature_config=FEATURE_CONFIG,
+    feature_config=
+        FEATURE_CONFIG,
 
     metadata={
 
-        "pipeline": "movie_map",
+        # -------------------------------------------------
+        # Pipeline
+        # -------------------------------------------------
 
-        "visual_size_strength": VISUAL_SIZE_STRENGTH,
+        "pipeline":
+            "movie_map",
 
-        "embedding": "TF-IDF",
+        # -------------------------------------------------
+        # Semantic representation
+        # -------------------------------------------------
 
-        "projection": "UMAP",
+        "embedding":
+            "TF-IDF + Sentence-BERT reviews",
 
-        "items": len(final),
+        "tfidf_model":
+            "movies_tags",
 
-        "clusters": int(final["cluster"].nunique())
+        "tfidf_original_dimensions":
+            int(
+                tfidf_matrix.shape[1]
+            ),
+
+        "tfidf_svd_components":
+            int(
+                fusion_info[
+                    "tfidf_components"
+                ]
+            ),
+
+        "tfidf_svd_explained_variance":
+            float(
+                fusion_info[
+                    "svd_explained_variance"
+                ]
+            ),
+
+        "review_embedding_model":
+            "sentence-transformers/all-MiniLM-L6-v2",
+
+        "review_embedding_dimensions":
+            int(
+                fusion_info[
+                    "review_components"
+                ]
+            ),
+
+        "review_share":
+            REVIEW_SHARE,
+
+        "tfidf_share":
+            1.0 - REVIEW_SHARE,
+
+        "fused_dimensions":
+            int(
+                fusion_info[
+                    "fused_dimensions"
+                ]
+            ),
+
+        "items_with_review_embeddings":
+            int(
+                fusion_info[
+                    "entities_with_reviews"
+                ]
+            ),
+
+        # -------------------------------------------------
+        # Projection
+        # -------------------------------------------------
+
+        "projection":
+            "UMAP",
+
+        "umap_metric":
+            "cosine",
+
+        "umap_n_neighbors":
+            15,
+
+        "umap_min_dist":
+            0.1,
+
+        # -------------------------------------------------
+        # Visual configuration
+        # -------------------------------------------------
+
+        "visual_size_strength":
+            VISUAL_SIZE_STRENGTH,
+
+        # -------------------------------------------------
+        # Atlas information
+        # -------------------------------------------------
+
+        "items":
+            len(final),
+
+        "clusters":
+            int(
+                final["cluster"]
+                .nunique()
+            )
 
     }
 
@@ -276,7 +633,9 @@ bundle = build_bundle(
 # EXPORT FRONTEND DATA
 # =========================================================
 
-print("\nExporting AtlasBundle...")
+print(
+    "\nExporting AtlasBundle..."
+)
 
 export_bundle(
 
@@ -287,4 +646,67 @@ export_bundle(
 )
 
 
-print("\n✅ Movie Atlas complete!")
+# =========================================================
+# COMPLETE
+# =========================================================
+
+print()
+print(
+    "=" * 60
+)
+print(
+    "✅ ENRICHED MOVIE ATLAS COMPLETE"
+)
+print(
+    "=" * 60
+)
+
+print()
+
+print(
+    f"Movies: "
+    f"{len(final):,}"
+)
+
+print(
+    f"Movies with review embeddings: "
+    f"{int((review_counts > 0).sum()):,}"
+)
+
+print(
+    f"TF-IDF / Review semantic share: "
+    f"{1.0 - REVIEW_SHARE:.2f} / "
+    f"{REVIEW_SHARE:.2f}"
+)
+
+print(
+    f"Fused semantic dimensions: "
+    f"{semantic_matrix.shape[1]}"
+)
+
+print(
+    f"Clusters: "
+    f"{final['cluster'].nunique():,}"
+)
+
+print()
+
+print(
+    "Analysis dataframe:"
+)
+
+print(
+    OUTPUT_PATH
+)
+
+print()
+
+print(
+    "Frontend data:"
+)
+
+print(
+    JSON_DIR
+)
+
+print()

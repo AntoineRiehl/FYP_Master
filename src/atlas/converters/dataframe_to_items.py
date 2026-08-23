@@ -323,6 +323,60 @@ def _get_statistics(
 
 
 # =========================================================
+# ENRICHMENT
+# =========================================================
+
+def _get_enrichment(
+    row
+):
+    """
+    Export optional enrichment information attached to
+    an atlas item.
+
+    Review text itself is deliberately NOT exported.
+
+    Instead we expose compact information describing
+    whether review-derived semantic information was used.
+    """
+
+    review_count = _safe_int(
+
+        _get(
+            row,
+            "review_count",
+            0
+        ),
+
+        0
+
+    )
+
+    reviews_used_for_embedding = _safe_int(
+
+        _get(
+            row,
+            "reviews_used_for_embedding",
+            0
+        ),
+
+        0
+
+    )
+
+    return {
+
+        "review_count":
+            review_count,
+
+        "reviews_used_for_embedding":
+            reviews_used_for_embedding,
+
+        "has_review_embedding":
+            reviews_used_for_embedding > 0
+
+    }
+
+# =========================================================
 # DATAFRAME → ATLAS ITEMS
 # =========================================================
 
@@ -592,33 +646,43 @@ def dataframe_to_items(
             # VISUAL INFORMATION
             # -------------------------------------------------
 
-            visual=AtlasVisual(
+                        visual=AtlasVisual(
 
-                size=_safe_float(
-                    _get(
-                        row,
-                        "visual_size",
-                        1
-                    ),
-                    1
-                ),
+                            size=_safe_float(
+                                _get(
+                                    row,
+                                    "visual_size",
+                                    1
+                                ),
+                                1
+                            ),
 
-                cluster=_safe_int(
-                    _get(
-                        row,
-                        "cluster",
-                        -1
+                            cluster=_safe_int(
+                                _get(
+                                    row,
+                                    "cluster",
+                                    -1
+                                )
+                            ),
+
+                            cluster_label=_get(
+                                row,
+                                "cluster_label"
+                            )
+
+                        ),
+
+
+                        # -------------------------------------------------
+                        # ENRICHMENT
+                        # -------------------------------------------------
+
+                        enrichment=_get_enrichment(
+                            row
+                        )
+
                     )
-                ),
-
-                cluster_label=_get(
-                    row,
-                    "cluster_label"
-                )
-
-            )
-
-        )
+        
 
 
         items.append(

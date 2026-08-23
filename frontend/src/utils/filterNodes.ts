@@ -116,6 +116,83 @@ function filterByDomain(
 
 
 // =====================================================
+// HAS REVIEWS
+// =====================================================
+
+function hasReviews(
+    node: AtlasNode
+): boolean {
+
+
+    // -------------------------------------------------
+    // PRIMARY SIGNAL
+    //
+    // Reviews actually contributed to the semantic
+    // embedding used to position this item.
+    // -------------------------------------------------
+
+    if (
+        node.enrichment
+        ?.has_review_embedding === true
+    ) {
+
+        return true;
+
+    }
+
+
+    // -------------------------------------------------
+    // SECONDARY SIGNAL
+    //
+    // The source dataset contains prepared reviews,
+    // even if an embedding signal is unavailable.
+    // -------------------------------------------------
+
+    const reviewCount =
+        node.enrichment
+        ?.review_count;
+
+
+    if (
+        typeof reviewCount === "number"
+        &&
+        Number.isFinite(
+            reviewCount
+        )
+        &&
+        reviewCount > 0
+    ) {
+
+        return true;
+
+    }
+
+
+    // -------------------------------------------------
+    // LEGACY / FUTURE FALLBACK
+    //
+    // Some atlases may directly export review objects.
+    // -------------------------------------------------
+
+    if (
+        Array.isArray(
+            node.text.reviews
+        )
+        &&
+        node.text.reviews.length > 0
+    ) {
+
+        return true;
+
+    }
+
+
+    return false;
+
+}
+
+
+// =====================================================
 // REVIEW FILTER
 // =====================================================
 
@@ -137,11 +214,9 @@ function filterByReviews(
 
     return nodes.filter(
         node =>
-            Array.isArray(
-                node.text.reviews
+            hasReviews(
+                node
             )
-            &&
-            node.text.reviews.length > 0
     );
 
 }

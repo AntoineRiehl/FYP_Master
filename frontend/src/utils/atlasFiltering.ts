@@ -1,9 +1,12 @@
-//frontend/src/utils/atlasFiltering.ts
+// frontend/src/utils/atlasFiltering.ts
 
 import type {
-    AtlasFilters,
     AtlasNode
 } from "../types/atlas";
+
+import type {
+    AtlasFilters
+} from "../types/filters";
 
 
 // =====================================================
@@ -14,7 +17,9 @@ export const DEFAULT_ATLAS_FILTERS: AtlasFilters = {
 
     domains: [],
 
-    categories: []
+    reviewsOnly: false,
+
+    balanceMode: "all"
 
 };
 
@@ -33,6 +38,7 @@ export function filterAtlas(
 
 
     return nodes.filter(
+
         node => {
 
 
@@ -40,12 +46,17 @@ export function filterAtlas(
             // DOMAIN
             // -------------------------------------------------
 
-            if(
-                filters.domains.length > 0 &&
+            if (
+
+                filters.domains.length > 0
+
+                &&
+
                 !filters.domains.includes(
                     node.domain
                 )
-            ){
+
+            ) {
 
                 return false;
 
@@ -53,23 +64,26 @@ export function filterAtlas(
 
 
             // -------------------------------------------------
-            // CATEGORY
+            // REVIEWS
             // -------------------------------------------------
 
-            if(
-                filters.categories.length > 0
-            ){
+            if (
+                filters.reviewsOnly
+            ) {
 
-                const hasCategory =
-                    node.text.categories.some(
-                        category =>
-                            filters.categories.includes(
-                                category
-                            )
-                    );
+                const hasReviewEmbedding = (
+
+                    node.enrichment
+                        ?.has_review_embedding
+
+                    === true
+
+                );
 
 
-                if(!hasCategory){
+                if (
+                    !hasReviewEmbedding
+                ) {
 
                     return false;
 
@@ -78,9 +92,23 @@ export function filterAtlas(
             }
 
 
+            // -------------------------------------------------
+            // DOMAIN BALANCE
+            // -------------------------------------------------
+            //
+            // balanceMode is not handled here.
+            //
+            // This function performs inclusion/exclusion
+            // filtering only. Any balancing / sampling of
+            // domains can remain in the corresponding atlas
+            // layout logic.
+            // -------------------------------------------------
+
+
             return true;
 
         }
+
     );
 
 }
@@ -102,10 +130,15 @@ export function getAvailableDomains(
         new Set(
 
             nodes
+
                 .map(
-                    node => node.domain
+                    node =>
+                        node.domain
                 )
-                .filter(Boolean)
+
+                .filter(
+                    Boolean
+                )
 
         )
 
@@ -138,26 +171,34 @@ export function getAvailableCategories(
             :
 
         nodes.filter(
+
             node =>
                 domains.includes(
                     node.domain
                 )
+
         );
 
 
-    const categories =
+    const categories = (
+
         filteredNodes.flatMap(
+
             node =>
                 node.text.categories
-        );
+
+        )
+
+    );
 
 
     return Array.from(
 
         new Set(
 
-            categories
-                .filter(Boolean)
+            categories.filter(
+                Boolean
+            )
 
         )
 
