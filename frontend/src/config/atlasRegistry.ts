@@ -1,4 +1,4 @@
-//frontend/src/config/atlasRegistry.ts
+// frontend/src/config/atlasRegistry.ts
 
 export type AtlasDefinition = {
 
@@ -36,21 +36,65 @@ export const ATLAS_REGISTRY: AtlasDefinition[] = [
         domains: ["restaurants"]
     },
 
+    // ========================================================
+    // CROSS-DOMAIN — METHOD A
+    // GENERAL SEMANTIC SPACE
+    // ========================================================
+
     {
         id: "movies_music",
-        label: "Movies + Music",
-        description: "Cross-domain movie and music semantic atlas",
+        label: "Movies + Music — General Semantic",
+        description:
+            "Cross-domain movie and music atlas based on general semantic similarity",
         domains: [
             "movies",
             "music"
         ]
     },
 
+    // ========================================================
+    // CROSS-DOMAIN — METHOD B
+    // SHARED EXPERIENTIAL / FEEL SPACE
+    // ========================================================
+
+    {
+        id: "movies_music_feel",
+        label: "Movies + Music — Feel",
+        description:
+            "Cross-domain movie and music atlas based on shared experiential characteristics",
+        domains: [
+            "movies",
+            "music"
+        ]
+    },
+
+    // ========================================================
+    // CROSS-DOMAIN — METHOD A
+    // GENERAL SEMANTIC SPACE
+    // ========================================================
+
     {
         id: "movies_music_restaurants",
-        label: "Movies + Music + Restaurants",
+        label: "Movies + Music + Restaurants — General Semantic",
         description:
-            "Cross-domain movie, music and restaurant semantic atlas",
+            "Cross-domain movie, music and restaurant atlas based on general semantic similarity",
+        domains: [
+            "movies",
+            "music",
+            "restaurants"
+        ]
+    },
+
+    // ========================================================
+    // CROSS-DOMAIN — METHOD B
+    // SHARED EXPERIENTIAL / FEEL SPACE
+    // ========================================================
+
+    {
+        id: "movies_music_restaurants_feel",
+        label: "Movies + Music + Restaurants — Feel",
+        description:
+            "Cross-domain movie, music and restaurant atlas based on shared experiential characteristics",
         domains: [
             "movies",
             "music",
