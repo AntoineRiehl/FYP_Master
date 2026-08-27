@@ -1,4 +1,4 @@
-//frontend/src/components/universe/renderer.ts
+// frontend/src/components/universe/renderer.ts
 
 import type {
     AtlasData,
@@ -9,6 +9,11 @@ import type {
 import type {
     Camera
 } from "./camera";
+
+
+import type {
+    NeighborResult
+} from "./neighbors";
 
 
 import {
@@ -27,6 +32,16 @@ import {
 
 
 import {
+    drawNeighborLinks
+} from "./renderer/drawNeighborLinks";
+
+
+import {
+    drawSelection
+} from "./renderer/drawSelection";
+
+
+import {
     detectHover
 } from "./renderer/hover";
 
@@ -36,6 +51,9 @@ import type {
 } from "../../config/colorMode";
 
 
+// =====================================================
+// RENDER UNIVERSE
+// =====================================================
 
 export function renderUniverse(
 
@@ -52,10 +70,18 @@ export function renderUniverse(
         y: number;
     },
 
-    colorMode: ColorMode
+    colorMode: ColorMode,
+
+    selectedNode: AtlasNode | null,
+
+    neighbors: NeighborResult[]
 
 ): AtlasNode | null {
 
+
+    // =================================================
+    // CLEAR
+    // =================================================
 
     ctx.clearRect(
 
@@ -70,6 +96,9 @@ export function renderUniverse(
     );
 
 
+    // =================================================
+    // LEVEL OF DETAIL
+    // =================================================
 
     const mode =
 
@@ -78,6 +107,9 @@ export function renderUniverse(
         );
 
 
+    // =================================================
+    // REGIONS
+    // =================================================
 
     if (mode === 0) {
 
@@ -94,11 +126,56 @@ export function renderUniverse(
 
         );
 
-
     }
+
+
+    // =================================================
+    // FULL / LANDMARK ATLAS
+    // =================================================
 
     else {
 
+
+        // =============================================
+        // NEIGHBOUR LINKS
+        // =============================================
+
+        /*
+         * Links are drawn first so nodes remain visually
+         * above them.
+         */
+
+        if (
+
+            selectedNode
+
+            &&
+
+            neighbors.length > 0
+
+        ) {
+
+
+            drawNeighborLinks(
+
+                ctx,
+
+                canvas,
+
+                camera,
+
+                selectedNode,
+
+                neighbors
+
+            );
+
+        }
+
+
+        // =============================================
+        // NORMAL NODES
+        // =============================================
 
         drawNodes(
 
@@ -112,6 +189,39 @@ export function renderUniverse(
 
             mode,
 
+            colorMode,
+
+            selectedNode
+
+        );
+
+    }
+
+
+    // =================================================
+    // SELECTED NODE
+    // =================================================
+
+    /*
+     * Selection is drawn last so it always sits above
+     * the normal atlas.
+     */
+
+    if (selectedNode) {
+
+
+        drawSelection(
+
+            ctx,
+
+            canvas,
+
+            camera,
+
+            selectedNode,
+
+            mode,
+
             colorMode
 
         );
@@ -119,6 +229,9 @@ export function renderUniverse(
     }
 
 
+    // =================================================
+    // HOVER
+    // =================================================
 
     const hovered =
 
@@ -135,6 +248,9 @@ export function renderUniverse(
         );
 
 
+    // =================================================
+    // TOOLTIP
+    // =================================================
 
     if (hovered) {
 
@@ -175,7 +291,6 @@ export function renderUniverse(
         );
 
     }
-
 
 
     return hovered;

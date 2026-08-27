@@ -18,6 +18,11 @@ import type {
 } from "../config/colorMode";
 
 
+import type {
+    NeighborResult
+} from "./universe/neighbors";
+
+
 import {
     createCamera,
     flyTo
@@ -52,6 +57,12 @@ type Props = {
     onSelect:
         (node: AtlasNode | null) => void;
 
+    selectedNode:
+        AtlasNode | null;
+
+    neighbors:
+        NeighborResult[];
+
     focusNode:
         AtlasNode | null;
 
@@ -70,6 +81,10 @@ export default function UniverseCanvas({
 
     onSelect,
 
+    selectedNode,
+
+    neighbors,
+
     focusNode
 
 }: Props) {
@@ -86,10 +101,6 @@ export default function UniverseCanvas({
     // =================================================
     // CAMERA
     // =================================================
-
-    /*
-     * Camera persists between React renders.
-     */
 
     const cameraRef =
         useRef(createCamera());
@@ -112,7 +123,6 @@ export default function UniverseCanvas({
 
         const camera =
             cameraRef.current;
-
 
 
         // =================================================
@@ -139,16 +149,13 @@ export default function UniverseCanvas({
         }
 
 
-
         resize();
-
 
 
         window.addEventListener(
             "resize",
             resize
         );
-
 
 
         // =================================================
@@ -196,13 +203,11 @@ export default function UniverseCanvas({
             );
 
 
-
         // =================================================
         // ANIMATION LOOP
         // =================================================
 
         let animation: number;
-
 
 
         function frame() {
@@ -220,7 +225,11 @@ export default function UniverseCanvas({
 
                 mouse,
 
-                colorMode
+                colorMode,
+
+                selectedNode,
+
+                neighbors
 
             );
 
@@ -234,9 +243,7 @@ export default function UniverseCanvas({
         }
 
 
-
         frame();
-
 
 
         // =================================================
@@ -268,7 +275,11 @@ export default function UniverseCanvas({
 
         onSelect,
 
-        colorMode
+        colorMode,
+
+        selectedNode,
+
+        neighbors
 
     ]);
 
@@ -295,13 +306,6 @@ export default function UniverseCanvas({
         const camera =
             cameraRef.current;
 
-
-        /*
-         * Move directly to the node's world position
-         * and zoom in.
-         *
-         * No animation/fancy flight for now.
-         */
 
         flyTo(
 

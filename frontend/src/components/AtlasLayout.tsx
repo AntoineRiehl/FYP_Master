@@ -40,6 +40,11 @@ import {
 } from "../utils/filterNodes";
 
 
+import {
+    analyzeNeighbors
+} from "./universe/neighbors";
+
+
 // =====================================================
 // PROPS
 // =====================================================
@@ -96,31 +101,22 @@ export default function AtlasLayout({
         selectedNode,
         setSelectedNode
     ] =
-    useState<AtlasNode | null>(
-        null
-    );
+        useState<AtlasNode | null>(
+            null
+        );
 
 
     // =================================================
     // NODE TO FOCUS
     // =================================================
 
-    /*
-     * This is separate from selectedNode.
-     *
-     * Selecting a node does not necessarily mean
-     * that the camera should move.
-     *
-     * Search result clicks will set both.
-     */
-
     const [
         focusNode,
         setFocusNode
     ] =
-    useState<AtlasNode | null>(
-        null
-    );
+        useState<AtlasNode | null>(
+            null
+        );
 
 
     // =================================================
@@ -131,7 +127,7 @@ export default function AtlasLayout({
         searchQuery,
         setSearchQuery
     ] =
-    useState("");
+        useState("");
 
 
     // =================================================
@@ -142,9 +138,9 @@ export default function AtlasLayout({
         colorMode,
         setColorMode
     ] =
-    useState<ColorMode>(
-        "cluster"
-    );
+        useState<ColorMode>(
+            "cluster"
+        );
 
 
     // =================================================
@@ -155,15 +151,15 @@ export default function AtlasLayout({
         filters,
         setFilters
     ] =
-    useState<AtlasFilters>({
+        useState<AtlasFilters>({
 
-        domains: [],
+            domains: [],
 
-        reviewsOnly: false,
+            reviewsOnly: false,
 
-        balanceMode: "all"
+            balanceMode: "all"
 
-    });
+        });
 
 
     // =================================================
@@ -255,6 +251,51 @@ export default function AtlasLayout({
 
 
     // =================================================
+    // NEIGHBOUR ANALYSIS
+    // =================================================
+
+    /*
+     * This runs only when:
+     *
+     * - selection changes
+     * - filtered atlas population changes
+     *
+     * It does NOT run once per animation frame.
+     */
+
+    const neighborAnalysis =
+        useMemo(
+
+            () => {
+
+                if (!selectedNode) {
+
+                    return null;
+
+                }
+
+
+                return analyzeNeighbors(
+
+                    filteredNodes,
+
+                    selectedNode,
+
+                    5
+
+                );
+
+            },
+
+            [
+                filteredNodes,
+                selectedNode
+            ]
+
+        );
+
+
+    // =================================================
     // SEARCH RESULTS
     // =================================================
 
@@ -311,33 +352,15 @@ export default function AtlasLayout({
         node: AtlasNode
     ) {
 
-        /*
-         * Select the item so that the DetailsPanel
-         * opens/updates.
-         */
-
         setSelectedNode(
             node
         );
 
 
-        /*
-         * Tell UniverseCanvas that the camera
-         * should move to this node.
-         */
-
         setFocusNode(
             node
         );
 
-
-        /*
-         * Clear the search query after selecting
-         * an item.
-         *
-         * This keeps the sidebar cleaner and also
-         * allows the same item to be selected again.
-         */
 
         setSearchQuery("");
 
@@ -359,8 +382,8 @@ export default function AtlasLayout({
         );
 
 
-        // If the currently selected item
-        // is no longer visible, clear it.
+        // If selected item becomes invisible,
+        // clear the selection.
 
         if (
             selectedNode
@@ -378,10 +401,8 @@ export default function AtlasLayout({
         }
 
 
-        /*
-         * If the currently focused item becomes
-         * invisible, clear the focus request too.
-         */
+        // If focused item becomes invisible,
+        // clear the focus request.
 
         if (
             focusNode
@@ -509,6 +530,16 @@ export default function AtlasLayout({
 
                     onSelect={
                         handleSelectNode
+                    }
+
+                    selectedNode={
+                        selectedNode
+                    }
+
+                    neighbors={
+                        neighborAnalysis?.nearest
+                        ??
+                        []
                     }
 
                     focusNode={

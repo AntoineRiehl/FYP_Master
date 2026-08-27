@@ -1,5 +1,3 @@
-//frontend/src/components/universe/renderer/drawNodes.ts
-
 // frontend/src/components/universe/renderer/drawNodes.ts
 
 import type {
@@ -33,6 +31,11 @@ import {
 } from "./utils";
 
 
+import {
+    drawNodeLabels
+} from "./drawLabels";
+
+
 
 // =====================================================
 // DRAW NODES
@@ -50,7 +53,9 @@ export function drawNodes(
 
     mode: number,
 
-    colorMode: ColorMode
+    colorMode: ColorMode,
+
+    selectedNode: AtlasNode | null = null
 
 ) {
 
@@ -112,7 +117,7 @@ export function drawNodes(
 
 
     // =================================================
-    // DRAW
+    // DRAW CIRCLES
     // =================================================
 
     for (const node of capped) {
@@ -186,7 +191,7 @@ export function drawNodes(
 
 
         // ---------------------------------------------
-        // DYNAMIC COLOR
+        // COLOR
         // ---------------------------------------------
 
         ctx.fillStyle =
@@ -202,42 +207,56 @@ export function drawNodes(
 
         ctx.fill();
 
+    }
 
 
-        // ---------------------------------------------
-        // LABELS
-        // ---------------------------------------------
 
-        if (
+    // =================================================
+    // LABEL PASS
+    // =================================================
 
-            mode === 2
-
-            &&
-
-            radius > 4
-
-        ) {
+    if (mode === 2) {
 
 
-            ctx.fillStyle =
-                "white";
+        /*
+         * The selected node receives its own permanent
+         * highlighted label later.
+         *
+         * Exclude it from normal adaptive labels.
+         */
+
+        const labelCandidates =
+
+            selectedNode
+
+            ?
+
+            capped.filter(
+
+                node =>
+                    node !== selectedNode
+
+            )
+
+            :
+
+            capped;
 
 
-            ctx.font =
-                "11px Arial";
 
+        drawNodeLabels(
 
-            ctx.fillText(
+            ctx,
 
-                node.title,
+            canvas,
 
-                pos.x + 5,
+            camera,
 
-                pos.y
+            labelCandidates,
 
-            );
+            visible.length
 
-        }
+        );
 
     }
 

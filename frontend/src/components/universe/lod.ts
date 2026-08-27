@@ -2,11 +2,11 @@
 
 export function getLOD(zoom: number) {
 
-    if (zoom < 12) {
+    if (zoom < 20) {
         return 0; // regions
     }
 
-    if (zoom < 60) {
+    if (zoom < 150) {
         return 1; // landmarks
     }
 
