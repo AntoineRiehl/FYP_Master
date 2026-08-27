@@ -7,6 +7,8 @@
 
 export type Review = {
 
+    review_id?: string | null;
+
     text: string;
 
     source?: string | null;
@@ -39,7 +41,20 @@ export type TextFeatures = {
 
 export type MediaMetadata = {
 
-    year?: number | null;
+    /*
+     * Some existing exports contain a numeric year,
+     * while others contain a string such as "1995".
+     *
+     * The frontend accepts both rather than requiring
+     * old atlas bundles to be rebuilt.
+     */
+
+    year?:
+        number
+        |
+        string
+        |
+        null;
 
     country?: string | null;
 
@@ -112,6 +127,21 @@ export type AtlasVisual = {
     cluster?: number | null;
 
     cluster_label?: string | null;
+
+};
+
+
+// =====================================================
+// Enrichment
+// =====================================================
+
+export type AtlasEnrichment = {
+
+    review_count?: number;
+
+    reviews_used_for_embedding?: number;
+
+    has_review_embedding?: boolean;
 
 };
 
@@ -238,17 +268,250 @@ export type AtlasMetadata = {
 
 };
 
+
 // =====================================================
-// Enrichment
+// FEEL PROFILE
 // =====================================================
 
-export type AtlasEnrichment = {
+/*
+ * These are the 13 standardized experiential dimensions
+ * exported by build_frontend_item_details.py.
+ *
+ * Values are global z-scores calculated across the full
+ * semantically defined Movies + Music + Restaurants
+ * population.
+ */
 
-    review_count?: number;
+export type FeelProfile = {
 
-    reviews_used_for_embedding?: number;
+    valence: number;
 
-    has_review_embedding?: boolean;
+    activation: number;
+
+    potency: number;
+
+    tension: number;
+
+    warmth: number;
+
+    scale: number;
+
+    tone: number;
+
+    familiarity: number;
+
+    refinement: number;
+
+    complexity: number;
+
+    nostalgia: number;
+
+    wonder: number;
+
+    tenderness: number;
+
+};
+
+
+// =====================================================
+// ITEM SEMANTIC DETAILS
+// =====================================================
+
+export type ItemSemanticDetails = {
+
+    source?: string | null;
+
+    has_base_semantics: boolean;
+
+    has_review_semantics: boolean;
+
+};
+
+
+// =====================================================
+// ITEM REVIEW SUMMARY
+// =====================================================
+
+export type ItemReviewSummary = {
+
+    /*
+     * Number of prepared reviews available for this
+     * entity in the frontend-enrichment source data.
+     */
+
+    available_count: number;
+
+
+    /*
+     * Number of reviews used when producing the pooled
+     * review embedding.
+     */
+
+    used_for_embedding: number;
+
+
+    /*
+     * Maximum number of review samples exposed to the
+     * frontend for manual inspection.
+     */
+
+    sampled_count: number;
+
+};
+
+
+// =====================================================
+// ITEM PROFILE
+// =====================================================
+
+export type ItemProfile = {
+
+    /*
+     * False for entities excluded from the Feel space
+     * because neither usable base semantics nor usable
+     * review semantics were available.
+     */
+
+    feel_defined: boolean;
+
+
+    /*
+     * Null when feel_defined is false.
+     */
+
+    feel:
+        FeelProfile
+        |
+        null;
+
+
+    semantic:
+        ItemSemanticDetails;
+
+
+    reviews:
+        ItemReviewSummary;
+
+};
+
+
+// =====================================================
+// ITEM DETAIL REVIEW
+// =====================================================
+
+export type ItemDetailReview = {
+
+    review_id?: string | null;
+
+    text: string;
+
+    rating?: number | null;
+
+    date?: string | null;
+
+    source?: string | null;
+
+};
+
+
+// =====================================================
+// REVIEW DETAIL BUNDLE
+// =====================================================
+
+export type ItemReviewBundle = {
+
+    available_count: number;
+
+    sampled_count: number;
+
+    reviews: ItemDetailReview[];
+
+};
+
+
+// =====================================================
+// ITEM DETAILS MANIFEST
+// =====================================================
+
+export type ItemDetailsManifest = {
+
+    schema_version: number;
+
+    generated_at_utc: string;
+
+
+    sharding: {
+
+        shard_count: number;
+
+        algorithm: string;
+
+        profile_pattern: string;
+
+        review_pattern: string;
+
+    };
+
+
+    feel: {
+
+        available_on_all_atlases: boolean;
+
+        representation: string;
+
+        dimensions: string[];
+
+
+        scaling: {
+
+            method: string;
+
+            fit_population: string;
+
+            mean:
+                Record<
+                    string,
+                    number
+                >;
+
+            scale:
+                Record<
+                    string,
+                    number
+                >;
+
+        };
+
+    };
+
+
+    reviews: {
+
+        sample_size_per_entity: number;
+
+        sampling: string;
+
+        note: string;
+
+    };
+
+
+    domains:
+
+        Record<
+            string,
+            {
+
+                entity_count: number;
+
+                feel_defined_count: number;
+
+                entities_with_reviews: number;
+
+                prepared_review_count: number;
+
+            }
+        >;
 
 };
 
@@ -269,6 +532,9 @@ export type AtlasEnrichment = {
  *
  * Category:
  *     Domain-specific category assigned to the item.
+ *
+ * Feel:
+ *     Experiential / Feel-based colouring.
  */
 export type ColorMode =
     | "domain"
@@ -281,11 +547,13 @@ export type ColorMode =
 // Atlas filters
 // =====================================================
 
-/**
- * Filters applied to the currently loaded atlas.
+/*
+ * Legacy/general atlas filter type.
  *
- * Empty arrays mean "show everything".
+ * The active richer filter implementation currently
+ * lives in types/filters.ts.
  */
+
 export type AtlasFilters = {
 
     domains: string[];

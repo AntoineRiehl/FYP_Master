@@ -1,6 +1,5 @@
 // frontend/src/components/AtlasLayout.tsx
 
-
 import {
     useEffect,
     useMemo,
@@ -20,11 +19,7 @@ import DetailsPanel
 
 import type {
     AtlasData,
-    AtlasNode
-} from "../types/atlas";
-
-
-import type {
+    AtlasNode,
     ColorMode
 } from "../types/atlas";
 
@@ -41,8 +36,15 @@ import {
 
 
 import {
-    analyzeNeighbors
+    analyzeNeighbors,
+    buildDomainPopularityThresholds
 } from "./universe/neighbors";
+
+
+import {
+    buildClusterStatsIndex,
+    getNodeClusterStats
+} from "../utils/clusterStats";
 
 
 // =====================================================
@@ -78,7 +80,7 @@ export default function AtlasLayout({
 
     // =================================================
     // AVAILABLE DOMAINS
-    // =================================================
+    // =====================================================
 
     const availableDomains =
         useMemo(
@@ -88,14 +90,16 @@ export default function AtlasLayout({
                     data.atlas
                 ),
 
-            [data.atlas]
+            [
+                data.atlas
+            ]
 
         );
 
 
     // =================================================
     // SELECTED NODE
-    // =================================================
+    // =====================================================
 
     const [
         selectedNode,
@@ -108,7 +112,7 @@ export default function AtlasLayout({
 
     // =================================================
     // NODE TO FOCUS
-    // =================================================
+    // =====================================================
 
     const [
         focusNode,
@@ -121,7 +125,7 @@ export default function AtlasLayout({
 
     // =================================================
     // SEARCH
-    // =================================================
+    // =====================================================
 
     const [
         searchQuery,
@@ -132,7 +136,7 @@ export default function AtlasLayout({
 
     // =================================================
     // COLOUR MODE
-    // =================================================
+    // =====================================================
 
     const [
         colorMode,
@@ -145,7 +149,7 @@ export default function AtlasLayout({
 
     // =================================================
     // FILTERS
-    // =================================================
+    // =====================================================
 
     const [
         filters,
@@ -163,8 +167,8 @@ export default function AtlasLayout({
 
 
     // =================================================
-    // KEEP FILTER DOMAINS IN SYNC WITH ATLAS
-    // =================================================
+    // KEEP FILTER DOMAINS IN SYNC
+    // =====================================================
 
     useEffect(() => {
 
@@ -187,15 +191,21 @@ export default function AtlasLayout({
 
     // =================================================
     // RESET ATLAS-SPECIFIC STATE
-    // =================================================
+    // =====================================================
 
     useEffect(() => {
 
-        setSelectedNode(null);
+        setSelectedNode(
+            null
+        );
 
-        setFocusNode(null);
+        setFocusNode(
+            null
+        );
 
-        setSearchQuery("");
+        setSearchQuery(
+            ""
+        );
 
     }, [
         atlasName
@@ -204,7 +214,7 @@ export default function AtlasLayout({
 
     // =================================================
     // FILTERED NODES
-    // =================================================
+    // =====================================================
 
     const filteredNodes =
         useMemo(
@@ -228,7 +238,7 @@ export default function AtlasLayout({
 
     // =================================================
     // FILTERED ATLAS DATA
-    // =================================================
+    // =====================================================
 
     const filteredData =
         useMemo(
@@ -251,16 +261,110 @@ export default function AtlasLayout({
 
 
     // =================================================
-    // NEIGHBOUR ANALYSIS
-    // =================================================
+    // POPULARITY THRESHOLDS
+    // =====================================================
 
     /*
-     * This runs only when:
+     * Mainstream / niche definitions are calculated
+     * from the COMPLETE atlas.
      *
-     * - selection changes
-     * - filtered atlas population changes
+     * They therefore do not change when the user
+     * temporarily changes filters.
+     */
+
+    const popularityThresholds =
+        useMemo(
+
+            () =>
+                buildDomainPopularityThresholds(
+
+                    data.atlas,
+
+                    0.20,
+
+                    0.80
+
+                ),
+
+            [
+                data.atlas
+            ]
+
+        );
+
+
+    // =================================================
+    // CLUSTER STATS INDEX
+    // =====================================================
+
+    /*
+     * Cluster statistics also describe the COMPLETE
+     * atlas, not the temporarily filtered view.
      *
-     * It does NOT run once per animation frame.
+     * This is calculated once when an atlas loads.
+     */
+
+    const clusterStatsIndex =
+        useMemo(
+
+            () =>
+                buildClusterStatsIndex(
+                    data.atlas
+                ),
+
+            [
+                data.atlas
+            ]
+
+        );
+
+
+    // =================================================
+    // SELECTED NODE CLUSTER STATS
+    // =====================================================
+
+    const selectedClusterStats =
+        useMemo(
+
+            () => {
+
+                if (!selectedNode) {
+
+                    return null;
+
+                }
+
+
+                return getNodeClusterStats(
+
+                    selectedNode,
+
+                    clusterStatsIndex
+
+                );
+
+            },
+
+            [
+                selectedNode,
+                clusterStatsIndex
+            ]
+
+        );
+
+
+    // =================================================
+    // NEIGHBOUR ANALYSIS
+    // =====================================================
+
+    /*
+     * Neighbour candidates use filteredNodes so:
+     *
+     * - canvas links correspond to visible entities;
+     * - sidebar exploration respects active filters.
+     *
+     * Popularity thresholds themselves remain based on
+     * the complete atlas.
      */
 
     const neighborAnalysis =
@@ -281,7 +385,9 @@ export default function AtlasLayout({
 
                     selectedNode,
 
-                    5
+                    5,
+
+                    popularityThresholds
 
                 );
 
@@ -289,7 +395,8 @@ export default function AtlasLayout({
 
             [
                 filteredNodes,
-                selectedNode
+                selectedNode,
+                popularityThresholds
             ]
 
         );
@@ -297,7 +404,7 @@ export default function AtlasLayout({
 
     // =================================================
     // SEARCH RESULTS
-    // =================================================
+    // =====================================================
 
     const searchResults =
 
@@ -312,13 +419,16 @@ export default function AtlasLayout({
         filteredNodes
 
             .filter(
+
                 node =>
 
                     node.title
                         .toLowerCase()
                         .includes(
+
                             searchQuery
                                 .toLowerCase()
+
                         )
 
             )
@@ -330,15 +440,33 @@ export default function AtlasLayout({
 
 
     // =================================================
-    // SELECT NODE
-    // =================================================
+    // SELECT NODE FROM CANVAS
+    // =====================================================
 
     function handleSelectNode(
+
         node: AtlasNode | null
+
     ) {
+
+        /*
+         * Canvas selection should not automatically
+         * move the camera.
+         */
 
         setSelectedNode(
             node
+        );
+
+
+        /*
+         * Clear an old focus request so a future
+         * sidebar navigation can focus the same item
+         * again if necessary.
+         */
+
+        setFocusNode(
+            null
         );
 
     }
@@ -346,10 +474,12 @@ export default function AtlasLayout({
 
     // =================================================
     // SELECT SEARCH RESULT
-    // =================================================
+    // =====================================================
 
     function handleSelectSearchResult(
+
         node: AtlasNode
+
     ) {
 
         setSelectedNode(
@@ -362,14 +492,51 @@ export default function AtlasLayout({
         );
 
 
-        setSearchQuery("");
+        setSearchQuery(
+            ""
+        );
+
+    }
+
+
+    // =================================================
+    // SELECT RELATED ITEM
+    // =====================================================
+
+    /*
+     * Used by clickable neighbours and Discovery links
+     * in the DetailsPanel.
+     *
+     * Unlike a canvas click, sidebar navigation should
+     * move the camera to the newly selected item.
+     */
+
+    function handleSelectRelatedNode(
+
+        node: AtlasNode
+
+    ) {
+
+        setSelectedNode(
+            node
+        );
+
+
+        setFocusNode(
+            node
+        );
+
+
+        setSearchQuery(
+            ""
+        );
 
     }
 
 
     // =================================================
     // UPDATE FILTERS
-    // =================================================
+    // =====================================================
 
     function handleFiltersChange(
 
@@ -382,15 +549,19 @@ export default function AtlasLayout({
         );
 
 
-        // If selected item becomes invisible,
-        // clear the selection.
+        // ---------------------------------------------
+        // CLEAR INVISIBLE SELECTION
+        // ---------------------------------------------
 
         if (
             selectedNode
             &&
             !filterNodes(
+
                 [selectedNode],
+
                 nextFilters
+
             ).length
         ) {
 
@@ -401,15 +572,19 @@ export default function AtlasLayout({
         }
 
 
-        // If focused item becomes invisible,
-        // clear the focus request.
+        // ---------------------------------------------
+        // CLEAR INVISIBLE FOCUS
+        // ---------------------------------------------
 
         if (
             focusNode
             &&
             !filterNodes(
+
                 [focusNode],
+
                 nextFilters
+
             ).length
         ) {
 
@@ -424,28 +599,32 @@ export default function AtlasLayout({
 
     // =================================================
     // RENDER
-    // =================================================
+    // =====================================================
 
     return (
 
         <div
-
             style={{
 
-                display: "flex",
+                display:
+                    "flex",
 
-                width: "100vw",
+                width:
+                    "100vw",
 
-                height: "100vh",
+                height:
+                    "100vh",
 
-                overflow: "hidden",
+                overflow:
+                    "hidden",
 
-                background: "#050816",
+                background:
+                    "#050816",
 
-                color: "white"
+                color:
+                    "white"
 
             }}
-
         >
 
 
@@ -507,15 +686,15 @@ export default function AtlasLayout({
             ================================================= */}
 
             <div
-
                 style={{
 
-                    flex: 1,
+                    flex:
+                        1,
 
-                    position: "relative"
+                    position:
+                        "relative"
 
                 }}
-
             >
 
                 <UniverseCanvas
@@ -559,6 +738,22 @@ export default function AtlasLayout({
 
                 node={
                     selectedNode
+                }
+
+                atlasName={
+                    atlasName
+                }
+
+                neighborAnalysis={
+                    neighborAnalysis
+                }
+
+                clusterStats={
+                    selectedClusterStats
+                }
+
+                onSelectNode={
+                    handleSelectRelatedNode
                 }
 
             />

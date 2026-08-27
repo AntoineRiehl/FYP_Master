@@ -26,12 +26,57 @@ export type NeighborResult = {
 };
 
 
+// =====================================================
+// POPULARITY BANDS
+// =====================================================
+
+export type PopularityBand =
+
+    | "mainstream"
+    | "middle"
+    | "niche"
+    | "unknown";
+
+
+export type DomainPopularityThreshold = {
+
+    domain: string;
+
+    population: number;
+
+    /*
+     * Bottom 20% threshold.
+     */
+
+    nicheMax: number;
+
+    /*
+     * Top 20% threshold.
+     */
+
+    mainstreamMin: number;
+
+};
+
+
+export type DomainPopularityThresholds =
+
+    Record<
+        string,
+        DomainPopularityThreshold
+    >;
+
+
+// =====================================================
+// NEIGHBOUR ANALYSIS
+// =====================================================
+
 export type NeighborAnalysis = {
 
     /*
      * The N closest items overall, regardless of domain.
      *
-     * These are the nodes we will connect visually
+     * These are the nodes connected visually
      * on the canvas.
      */
 
@@ -40,8 +85,6 @@ export type NeighborAnalysis = {
 
     /*
      * Closest entity from the same domain.
-     *
-     * Useful later in the sidebar.
      */
 
     closestSameDomain:
@@ -51,7 +94,7 @@ export type NeighborAnalysis = {
     /*
      * Closest entity for every OTHER domain.
      *
-     * Example for selected Movie:
+     * Example:
      *
      * {
      *     music: {...},
@@ -64,6 +107,28 @@ export type NeighborAnalysis = {
             string,
             NeighborResult
         >;
+
+
+    /*
+     * Closest item classified as mainstream.
+     *
+     * Mainstream means top 20% popularity
+     * WITHIN THAT ITEM'S OWN DOMAIN.
+     */
+
+    closestMainstream:
+        NeighborResult | null;
+
+
+    /*
+     * Closest item classified as niche.
+     *
+     * Niche means bottom 20% popularity
+     * WITHIN THAT ITEM'S OWN DOMAIN.
+     */
+
+    closestNiche:
+        NeighborResult | null;
 
 };
 
@@ -85,7 +150,7 @@ function isSameNode(
     /*
      * Usually selectedNode is the exact object from
      * data.atlas, but ID comparison makes this robust
-     * if React/state creates another reference later.
+     * if object references change later.
      */
 
     return (
@@ -97,6 +162,49 @@ function isSameNode(
         a.id === b.id
 
     );
+
+}
+
+
+
+// =====================================================
+// POPULARITY VALUE
+// =====================================================
+
+function getPopularity(
+
+    node: AtlasNode
+
+): number | null {
+
+
+    const popularity =
+
+        node.statistics.popularity;
+
+
+    if (
+
+        popularity === null
+
+        ||
+
+        popularity === undefined
+
+        ||
+
+        !Number.isFinite(
+            popularity
+        )
+
+    ) {
+
+        return null;
+
+    }
+
+
+    return popularity;
 
 }
 
@@ -133,7 +241,7 @@ function atlasDistanceSquared(
      * Squared distance is sufficient while searching.
      *
      * Avoiding Math.sqrt() for every one of potentially
-     * 250,000 nodes makes the scan slightly cheaper.
+     * 250,000 nodes makes the scan cheaper.
      */
 
     return (
@@ -183,8 +291,8 @@ function insertNearest(
 
 
     /*
-     * This array is tiny — normally only 5 or 6 items —
-     * so sorting it is cheap.
+     * This array is tiny — normally only five or six
+     * items — so sorting it repeatedly is inexpensive.
      */
 
     nearest.sort(
@@ -215,6 +323,375 @@ function insertNearest(
 
 
 // =====================================================
+// PERCENTILE VALUE
+// =====================================================
+
+function percentileValue(
+
+    sortedValues: number[],
+
+    percentile: number
+
+): number {
+
+
+    if (
+        sortedValues.length === 0
+    ) {
+
+        return 0;
+
+    }
+
+
+    if (
+        sortedValues.length === 1
+    ) {
+
+        return sortedValues[0];
+
+    }
+
+
+    const position =
+
+        (
+            sortedValues.length
+            -
+            1
+        )
+
+        *
+
+        percentile;
+
+
+    const lowerIndex =
+
+        Math.floor(
+            position
+        );
+
+
+    const upperIndex =
+
+        Math.ceil(
+            position
+        );
+
+
+    if (
+        lowerIndex === upperIndex
+    ) {
+
+        return sortedValues[
+            lowerIndex
+        ];
+
+    }
+
+
+    const weight =
+
+        position
+        -
+        lowerIndex;
+
+
+    return (
+
+        sortedValues[
+            lowerIndex
+        ]
+
+        *
+
+        (
+            1
+            -
+            weight
+        )
+
+        +
+
+        sortedValues[
+            upperIndex
+        ]
+
+        *
+
+        weight
+
+    );
+
+}
+
+
+
+// =====================================================
+// BUILD DOMAIN POPULARITY THRESHOLDS
+// =====================================================
+
+export function buildDomainPopularityThresholds(
+
+    nodes: AtlasNode[],
+
+    nichePercentile = 0.20,
+
+    mainstreamPercentile = 0.80
+
+): DomainPopularityThresholds {
+
+
+    // =================================================
+    // COLLECT POPULARITY BY DOMAIN
+    // =================================================
+
+    const valuesByDomain =
+
+        new Map<
+            string,
+            number[]
+        >();
+
+
+    for (
+        const node
+        of nodes
+    ) {
+
+
+        const popularity =
+
+            getPopularity(
+                node
+            );
+
+
+        if (
+            popularity === null
+        ) {
+
+            continue;
+
+        }
+
+
+        let values =
+
+            valuesByDomain.get(
+                node.domain
+            );
+
+
+        if (!values) {
+
+
+            values = [];
+
+
+            valuesByDomain.set(
+
+                node.domain,
+
+                values
+
+            );
+
+        }
+
+
+        values.push(
+            popularity
+        );
+
+    }
+
+
+
+    // =================================================
+    // CALCULATE THRESHOLDS
+    // =================================================
+
+    const thresholds:
+
+        DomainPopularityThresholds = {};
+
+
+    for (
+        const [
+            domain,
+            values
+        ]
+        of valuesByDomain
+    ) {
+
+
+        /*
+         * A tiny population does not give us a useful
+         * mainstream / niche distinction.
+         */
+
+        if (
+            values.length < 5
+        ) {
+
+            continue;
+
+        }
+
+
+        values.sort(
+
+            (a, b) =>
+                a - b
+
+        );
+
+
+        const minimum =
+            values[0];
+
+
+        const maximum =
+            values[
+                values.length - 1
+            ];
+
+
+        /*
+         * If every item has exactly the same popularity,
+         * there is no meaningful popularity band.
+         */
+
+        if (
+            minimum === maximum
+        ) {
+
+            continue;
+
+        }
+
+
+        thresholds[
+            domain
+        ] = {
+
+            domain,
+
+            population:
+                values.length,
+
+            nicheMax:
+
+                percentileValue(
+
+                    values,
+
+                    nichePercentile
+
+                ),
+
+            mainstreamMin:
+
+                percentileValue(
+
+                    values,
+
+                    mainstreamPercentile
+
+                )
+
+        };
+
+    }
+
+
+    return thresholds;
+
+}
+
+
+
+// =====================================================
+// GET POPULARITY BAND
+// =====================================================
+
+export function getPopularityBand(
+
+    node: AtlasNode,
+
+    thresholds:
+        DomainPopularityThresholds
+
+): PopularityBand {
+
+
+    const popularity =
+
+        getPopularity(
+            node
+        );
+
+
+    if (
+        popularity === null
+    ) {
+
+        return "unknown";
+
+    }
+
+
+    const domainThreshold =
+
+        thresholds[
+            node.domain
+        ];
+
+
+    if (
+        !domainThreshold
+    ) {
+
+        return "unknown";
+
+    }
+
+
+    if (
+
+        popularity
+        >=
+        domainThreshold.mainstreamMin
+
+    ) {
+
+        return "mainstream";
+
+    }
+
+
+    if (
+
+        popularity
+        <=
+        domainThreshold.nicheMax
+
+    ) {
+
+        return "niche";
+
+    }
+
+
+    return "middle";
+
+}
+
+
+
+// =====================================================
 // ANALYSE NEIGHBOURS
 // =====================================================
 
@@ -224,7 +701,10 @@ export function analyzeNeighbors(
 
     selectedNode: AtlasNode,
 
-    nearestCount = 5
+    nearestCount = 5,
+
+    popularityThresholds?:
+        DomainPopularityThresholds
 
 ): NeighborAnalysis {
 
@@ -276,14 +756,45 @@ export function analyzeNeighbors(
 
 
     // =================================================
+    // MAINSTREAM ANALOGUE
+    // =================================================
+
+    let closestMainstreamWorking: {
+
+        node: AtlasNode;
+
+        distanceSquared: number;
+
+    } | null = null;
+
+
+
+    // =================================================
+    // NICHE ANALOGUE
+    // =================================================
+
+    let closestNicheWorking: {
+
+        node: AtlasNode;
+
+        distanceSquared: number;
+
+    } | null = null;
+
+
+
+    // =================================================
     // SINGLE PASS THROUGH ATLAS
     // =================================================
 
-    for (const node of nodes) {
+    for (
+        const node
+        of nodes
+    ) {
 
 
         // ---------------------------------------------
-        // Ignore selected item itself
+        // IGNORE SELECTED ITEM ITSELF
         // ---------------------------------------------
 
         if (
@@ -339,6 +850,101 @@ export function analyzeNeighbors(
 
 
         // =================================================
+        // POPULARITY ANALOGUES
+        // =================================================
+
+        if (
+            popularityThresholds
+        ) {
+
+
+            const band =
+
+                getPopularityBand(
+
+                    node,
+
+                    popularityThresholds
+
+                );
+
+
+            // -----------------------------------------
+            // MAINSTREAM
+            // -----------------------------------------
+
+            if (
+                band === "mainstream"
+            ) {
+
+
+                if (
+
+                    closestMainstreamWorking === null
+
+                    ||
+
+                    distanceSquared
+                    <
+                    closestMainstreamWorking
+                        .distanceSquared
+
+                ) {
+
+
+                    closestMainstreamWorking = {
+
+                        node,
+
+                        distanceSquared
+
+                    };
+
+                }
+
+            }
+
+
+            // -----------------------------------------
+            // NICHE
+            // -----------------------------------------
+
+            if (
+                band === "niche"
+            ) {
+
+
+                if (
+
+                    closestNicheWorking === null
+
+                    ||
+
+                    distanceSquared
+                    <
+                    closestNicheWorking
+                        .distanceSquared
+
+                ) {
+
+
+                    closestNicheWorking = {
+
+                        node,
+
+                        distanceSquared
+
+                    };
+
+                }
+
+            }
+
+        }
+
+
+
+        // =================================================
         // CLOSEST SAME DOMAIN
         // =================================================
 
@@ -375,6 +981,13 @@ export function analyzeNeighbors(
 
             }
 
+
+            /*
+             * We already handled popularity bands above.
+             *
+             * Nothing below this point is needed for
+             * same-domain nodes.
+             */
 
             continue;
 
@@ -423,10 +1036,11 @@ export function analyzeNeighbors(
 
 
     // =================================================
-    // CONVERT DISTANCES
+    // CONVERT TOP-N DISTANCES
     // =================================================
 
     const nearest:
+
         NeighborResult[] =
 
         nearestWorking.map(
@@ -437,6 +1051,7 @@ export function analyzeNeighbors(
                     result.node,
 
                 distance:
+
                     Math.sqrt(
                         result.distanceSquared
                     )
@@ -446,6 +1061,10 @@ export function analyzeNeighbors(
         );
 
 
+
+    // =================================================
+    // CONVERT SAME-DOMAIN DISTANCE
+    // =================================================
 
     const closestSameDomain:
 
@@ -461,6 +1080,7 @@ export function analyzeNeighbors(
                 closestSameDomainWorking.node,
 
             distance:
+
                 Math.sqrt(
 
                     closestSameDomainWorking
@@ -476,6 +1096,10 @@ export function analyzeNeighbors(
 
 
 
+    // =================================================
+    // CONVERT CROSS-DOMAIN DISTANCES
+    // =================================================
+
     const closestByDomain:
 
         Record<
@@ -484,7 +1108,6 @@ export function analyzeNeighbors(
         >
 
         = {};
-
 
 
     for (
@@ -509,6 +1132,7 @@ export function analyzeNeighbors(
                 result.node,
 
             distance:
+
                 Math.sqrt(
                     result.distanceSquared
                 )
@@ -516,6 +1140,74 @@ export function analyzeNeighbors(
         };
 
     }
+
+
+
+    // =================================================
+    // CONVERT MAINSTREAM ANALOGUE
+    // =================================================
+
+    const closestMainstream:
+
+        NeighborResult | null =
+
+        closestMainstreamWorking
+
+        ?
+
+        {
+
+            node:
+                closestMainstreamWorking.node,
+
+            distance:
+
+                Math.sqrt(
+
+                    closestMainstreamWorking
+                        .distanceSquared
+
+                )
+
+        }
+
+        :
+
+        null;
+
+
+
+    // =================================================
+    // CONVERT NICHE ANALOGUE
+    // =================================================
+
+    const closestNiche:
+
+        NeighborResult | null =
+
+        closestNicheWorking
+
+        ?
+
+        {
+
+            node:
+                closestNicheWorking.node,
+
+            distance:
+
+                Math.sqrt(
+
+                    closestNicheWorking
+                        .distanceSquared
+
+                )
+
+        }
+
+        :
+
+        null;
 
 
 
@@ -529,7 +1221,11 @@ export function analyzeNeighbors(
 
         closestSameDomain,
 
-        closestByDomain
+        closestByDomain,
+
+        closestMainstream,
+
+        closestNiche
 
     };
 
