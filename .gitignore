@@ -12,58 +12,71 @@ venv/
 ENV/
 
 # =========================
-# MODELS (IMPORTANT)
+# LARGE / GENERATED DATA
+# =========================
+data/raw/
+data/processed/
+data/intermediate/
+
+# =========================
+# MODEL / EMBEDDING ARTEFACTS
 # =========================
 models/
 *.pkl
 *.joblib
+*.h5
+*.pt
+*.bin
+*.npy
+*.npz
 
 # =========================
-# DATA (KEEP RAW ONLY IF SMALL)
-# =========================
-data/processed/
-data/raw
-data/intermediate/
-*.csv
-!data/raw/*.csv
-
-# =========================
-# JUPYTER NOTEBOOKS
+# JUPYTER
 # =========================
 .ipynb_checkpoints/
-*.ipynb_checkpoints
 
 # =========================
-# STREAMLIT
+# FRONTEND
 # =========================
-.streamlit/
+frontend/node_modules/
+frontend/dist/
 
 # =========================
-# OS FILES
+# SECRETS / ENVIRONMENT
 # =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# IDE / OS
+# =========================
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
 
 # =========================
-# IDE / EDITORS
-# =========================
-.vscode/
-.idea/
-
-# =========================
-# LOGS
+# LOGS / TEMPORARY FILES
 # =========================
 *.log
+saves/
 
-# =========================
-# LARGE ARTIFACTS
-# =========================
-*.h5
-*.pt
-*.bin
+backups/
 
-frontend/public/
+frontend/public/data/
 
-Commands.txt
+# Large generated atlas data
+frontend/public/data/
 
+# Backups
+backups/
+
+# Large scraped / generated datasets
+data/data_scraping/
+data/raw/
+data/processed/
+data/intermediate/
+
+# Temporary saves
 saves/

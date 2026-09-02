@@ -89,19 +89,15 @@ def create_tags_text(
 
 def compute_popularity_score(df):
 
-    stars = df["stars"]
-
-    reviews = np.log1p(
-        df["review_count"]
-    )
+    df = df.copy()
 
     df["popularity_score"] = (
-        stars * 0.6 +
-        reviews * 0.4
+        df["review_count"]
+        .fillna(0)
+        .astype(float)
     )
 
     return df
-
 
 # =========================================================
 # VISUAL SIZE

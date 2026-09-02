@@ -1,0 +1,19 @@
+Commands:
+
+Build movie map:
+python -m src.pipelines.build_movie_map
+python -m src.pipelines.build_music_map
+python -m src.pipelines.build_restaurants_map
+python -m src.pipelines.build_movies_music_atlas
+python -m src.pipelines.build_movies_music_restaurants_atlas
+
+Run Streamlit:
+streamlit run app/app.py
+
+Run React Frontend:
+npm run dev
+
+
+Other useful commands:
+python -m src.domains.movies.embed_movie_reviews 
+python -m src.domains.movies.evaluate_fusion_weights
