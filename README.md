@@ -1,3 +1,19 @@
+## Ready-to-Run Application
+
+A packaged Windows version of the final Semantic Atlas artefact is available
+from the repository's **Releases** section.
+
+The installer contains the seven final precomputed atlas configurations and
+does not require the original datasets, Python pipelines, or Vite development
+server to explore the submitted artefact.
+
+Download:
+
+`Semantic-Atlas-1.0.0-Setup.exe`
+
+> Note: this academic build is unsigned, so Windows SmartScreen may display a
+> warning when launching the installer.
+
 # Semantic Atlas
 
 **Interactive Exploration of Semantic and Experiential Relationships Across Cultural Domains**
